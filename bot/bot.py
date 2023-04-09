@@ -32,7 +32,7 @@ from telegram.constants import ParseMode, ChatAction
 import config
 import database
 import openai_utils
-
+import ai_generator.presentation as presentation
 
 # setup
 db = database.Database()
@@ -92,7 +92,7 @@ async def help_handle(update: Update, context: CallbackContext):
     await update.message.reply_text(HELP_MESSAGE, parse_mode=ParseMode.HTML)
 
 
-async def message_handle(update: Update, context: CallbackContext, message=None):       ##########
+async def message_handle(update: Update, context: CallbackContext, message=None):
     # check if message is edited
     if update.edited_message is not None:
         await edited_message_handle(update, context)
@@ -306,7 +306,6 @@ async def save_input(update: Update, context: CallbackContext):  # user message
         return INPUT_PROMPT
 
 
-
 async def prompt_callback(update: Update, context: CallbackContext):  # user message, skip if mode == auto
     print("prompt callback")
     # save input here
@@ -316,6 +315,9 @@ async def prompt_callback(update: Update, context: CallbackContext):  # user mes
 
 async def file_callback(update: Update, context: CallbackContext):
     print("file callback")
+    # chat_id = update.message.chat_id
+    pptx_bytes, pptx_title = await presentation.generate_ppt("svg files", "14")
+    await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
 
 
 async def end_second_level(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -458,10 +460,6 @@ def run_bot() -> None:
 
     application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
-
-
-
-
 
     presentation_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(language_callback, pattern=f"^{PRESENTATION}$")],

@@ -7,7 +7,7 @@ import re
 class Bing:
     def __init__(self, query, limit, adult, timeout, filter='', verbose=True):
         self.download_count = 0
-        self.image = []
+        self.image = 0
         self.query = query
         self.adult = adult
         self.filter = filter
@@ -45,7 +45,8 @@ class Bing:
     def save_image(self, link):
         request = urllib.request.Request(link, None, self.headers)
         image = urllib.request.urlopen(request, timeout=self.timeout).read()
-        if not imghdr.what(None, image):
+        supported_formats = ["jpeg", "png", "gif"]
+        if not imghdr.what(None, image) or imghdr.what(None, image) not in supported_formats:
             print('[Error]Invalid image, not saving {}\n'.format(link))
             raise ValueError('Invalid image, not saving {}\n'.format(link))
         return image
@@ -95,7 +96,7 @@ class Bing:
             for link in links:
                 if self.download_count < self.limit and link not in self.seen:
                     self.seen.add(link)
-                    self.image.append(self.download_image(link))
+                    self.image = self.download_image(link)
 
             self.page_counter += 1
         print("\n\n[%] Done. Downloaded {} images.".format(self.download_count))

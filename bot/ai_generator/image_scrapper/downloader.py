@@ -1,9 +1,11 @@
-from bing import Bing
+try:
+    from bing import Bing
+except ImportError:
+    from .bing import Bing
 
 
 def download(query, limit=100, adult_filter_off=True,
              timeout=60, filter="", verbose=True):
-    # engine = 'bing'
     if adult_filter_off:
         adult = 'off'
     else:
