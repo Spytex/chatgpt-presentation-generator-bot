@@ -38,6 +38,8 @@ import ai_generator.presentation as presentation
 db = database.Database()
 logger = logging.getLogger(__name__)
 
+CHAT_MODES = config.chat_modes
+
 HELP_MESSAGE = """Commands:
 ⚪ /menu – Show menu
 ⚪ /mode – Select mode
@@ -113,7 +115,7 @@ async def show_chat_modes_handle(update: Update, context: CallbackContext):
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
     keyboard = []
-    for chat_mode, chat_mode_dict in openai_utils.CHAT_MODES.items():
+    for chat_mode, chat_mode_dict in CHAT_MODES.items():
         keyboard.append([InlineKeyboardButton(chat_mode_dict["name"], callback_data=f"set_chat_mode|{chat_mode}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -131,9 +133,9 @@ async def set_chat_mode_handle(update: Update, context: CallbackContext):
 
     db.set_user_attribute(user_id, "current_chat_mode", chat_mode)
 
-    # await query.edit_message_text(f"<b>{openai_utils.CHAT_MODES[chat_mode]['name']}</b> mode is set", parse_mode=ParseMode.HTML)
+    # await query.edit_message_text(f"<b>{CHAT_MODES[chat_mode]['name']}</b> mode is set", parse_mode=ParseMode.HTML)
 
-    await query.edit_message_text(f"{openai_utils.CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
+    await query.edit_message_text(f"{CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
 
 
 
@@ -157,9 +159,10 @@ MENU = "⬅️Menu"
     TYPE_CHOICE,
     COUNT_SLIDE_CHOICE,
     TOPIC_CHOICE,
+    API_RESPONSE,
     START_OVER,
     MESSAGE_ID,
-) = map(chr, range(10, 18))
+) = map(chr, range(10, 19))
 
 
 async def menu_handle(update: Update, context: CallbackContext) -> str:
@@ -289,35 +292,54 @@ async def topic_callback(update: Update, context: CallbackContext) -> str:  # us
 
 
 async def save_input(update: Update, context: CallbackContext):  # user message
-    # await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
-    user_id = update.message.from_user.id
+    await register_user_if_not_exists(update, context, update.message.from_user)
     user_data = context.user_data
+    user_data[TOPIC_CHOICE] = update.message.text
+    user_id = update.message.from_user.id
     user_mode = db.get_user_attribute(user_id, "current_chat_mode")
-    print(user_data)
-    print(update.message.text)
-    # user_data[FEATURES][user_data[CURRENT_FEATURE]] = update.message.text
-    print(user_mode)
-    if user_mode == "auto":
-        await file_callback(update, context)
-        return END
-    else:
-        text = f"Prompt?"
-        await update.message.reply_text(text=text)
-        return INPUT_PROMPT
+    menu_choice = user_data[MENU_CHOICE]
+    match menu_choice:
+        case "Presentation":
+            language_choice = user_data[LANGUAGE_CHOICE].replace("language_", "")
+            template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
+            type_choice = user_data[TYPE_CHOICE].replace("type_", "")
+            count_slide_choice = user_data[COUNT_SLIDE_CHOICE].replace("slide_count_", "")
+            topic_choice = user_data[TOPIC_CHOICE]
+            prompt = await presentation.generate_ppt_prompt(language_choice, type_choice, count_slide_choice,
+                                                            topic_choice)
+            if user_mode == "auto":
+                response, n_used_tokens = await presentation.process_ppt_prompt(prompt)
+                pptx_bytes, pptx_title = await presentation.generate_ppt(response)
+                await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+            else:
+                await update.message.reply_text(text=prompt)
+                return INPUT_PROMPT
 
-
-async def prompt_callback(update: Update, context: CallbackContext):  # user message, skip if mode == auto
-    print("prompt callback")
-    # save input here
-    await file_callback(update, context)
+        case "Abstract":
+            language_choice = user_data[LANGUAGE_CHOICE].replace("language_", "")
+            type_choice = user_data[TYPE_CHOICE].replace("type_", "")
+            topic_choice = user_data[TOPIC_CHOICE]
     return END
 
 
-async def file_callback(update: Update, context: CallbackContext):
-    print("file callback")
-    # chat_id = update.message.chat_id
-    pptx_bytes, pptx_title = await presentation.generate_ppt("svg files", "14")
-    await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+async def prompt_callback(update: Update, context: CallbackContext):  # user message, skip if mode == auto
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_data = context.user_data
+    user_data[API_RESPONSE] = update.message.text
+    menu_choice = user_data[MENU_CHOICE]
+    match menu_choice:
+        case "Presentation":
+            api_response = user_data[API_RESPONSE]
+            try:
+                pptx_bytes, pptx_title = await presentation.generate_ppt(api_response)
+                await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+            except IndexError:
+                await update.message.reply_text("Check inserted data and try again!")
+                return INPUT_PROMPT
+        case "Abstract":
+            pass
+
+    return END
 
 
 async def end_second_level(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -471,7 +493,10 @@ def run_bot() -> None:
             INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_input)],
             INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, prompt_callback)],
         },
-        fallbacks=[CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$")],
+        fallbacks=[
+            CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$"),
+            CommandHandler("menu", menu_handle, filters=user_filter)
+                   ],
         map_to_parent={
             END: SELECTING_ACTION,
         },
@@ -486,7 +511,10 @@ def run_bot() -> None:
             INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_input)],
             INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, prompt_callback)],
         },
-        fallbacks=[CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$")],
+        fallbacks=[
+            CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$"),
+            CommandHandler("menu", menu_handle, filters=user_filter)
+        ],
         map_to_parent={
             END: SELECTING_ACTION,
         },

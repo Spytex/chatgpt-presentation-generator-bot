@@ -43,9 +43,9 @@ class Database:
             "last_interaction": datetime.now(),
             "first_seen": datetime.now(),
 
-            "current_chat_mode": "manual",
+            "current_chat_mode": "auto",
 
-            "n_available_tokens": 0,
+            "n_available_tokens": 10000,
             "n_used_tokens": 0,
         }
 

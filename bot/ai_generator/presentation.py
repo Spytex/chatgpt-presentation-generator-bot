@@ -17,7 +17,7 @@ except ImportError:
 openai.api_key = config.openai_api_key
 
 OPENAI_COMPLETION_OPTIONS = {
-    "temperature": 0.7,
+    "temperature": 0,
     "max_tokens": 1000,
     "top_p": 1,
     "frequency_penalty": 0,
@@ -35,60 +35,60 @@ async def refresh_bad_coding_practice():
     return
 
 
-async def generate_ppt(topic, slide_length):
-    template = os.path.join("bot", "ai_generator", "presentation_templates", "sample.pptx")
-    root = Presentation(template)
+async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
+    message = f"""Create an {language} language outline for a {emotion_type} slideshow presentation on the topic of {topic} which is {slide_length} slides 
+        long. 
+
+        You are allowed to use the following slide types:
+
+        Slide types:
+        Title Slide - (Title, Subtitle)
+        Content Slide - (Title, Content)
+        Image Slide - (Title, Content, Image)
+        Thanks Slide - (Title)
+
+        Put this tag before the Title Slide: [L_TS]
+        Put this tag before the Content Slide: [L_CS]
+        Put this tag before the Image Slide: [L_IS]
+        Put this tag before the Thanks Slide: [L_THS]
+
+        Put "[SLIDEBREAK]" after each slide 
+
+        For example:
+        [L_TS]
+        [TITLE]Mental Health[/TITLE]
+
+        [SLIDEBREAK]
+
+        [L_CS] 
+        [TITLE]Mental Health Definition[/TITLE]
+        [CONTENT]
+        1. Definition: A person’s condition with regard to their psychological and emotional well-being
+        2. Can impact one's physical health
+        3. Stigmatized too often.
+        [/CONTENT]
+
+        [SLIDEBREAK]
+
+        Put this tag before the Title: [TITLE]
+        Put this tag after the Title: [/TITLE]
+        Put this tag before the Subitle: [SUBTITLE]
+        Put this tag after the Subtitle: [/SUBTITLE]
+        Put this tag before the Content: [CONTENT]
+        Put this tag after the Content: [/CONTENT]
+        Put this tag before the Image: [IMAGE]
+        Put this tag after the Image: [/IMAGE]
+
+        Elaborate on the Content, provide as much information as possible.
+        You put a [/CONTENT] at the end of the Content.
+        Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
+        Do not include any special characters (?, !, ., :, ) in the Title.
+        Do not include any additional information in your response and stick to the format."""
+
+    return message
 
 
-    message = f"""Create an outline for a slideshow presentation on the topic of {topic} which is {slide_length} slides 
-    long. 
-
-    You are allowed to use the following slide types:
-
-    Slide types:
-    Title Slide - (Title, Subtitle)
-    Content Slide - (Title, Content)
-    Image Slide - (Title, Content, Image)
-    Thanks Slide - (Title)
-
-    Put this tag before the Title Slide: [L_TS]
-    Put this tag before the Content Slide: [L_CS]
-    Put this tag before the Image Slide: [L_IS]
-    Put this tag before the Thanks Slide: [L_THS]
-
-    Put "[SLIDEBREAK]" after each slide 
-
-    For example:
-    [L_TS]
-    [TITLE]Mental Health[/TITLE]
-
-    [SLIDEBREAK]
-
-    [L_CS] 
-    [TITLE]Mental Health Definition[/TITLE]
-    [CONTENT]
-    1. Definition: A person’s condition with regard to their psychological and emotional well-being
-    2. Can impact one's physical health
-    3. Stigmatized too often.
-    [/CONTENT]
-
-    [SLIDEBREAK]
-
-    Put this tag before the Title: [TITLE]
-    Put this tag after the Title: [/TITLE]
-    Put this tag before the Subitle: [SUBTITLE]
-    Put this tag after the Subtitle: [/SUBTITLE]
-    Put this tag before the Content: [CONTENT]
-    Put this tag after the Content: [/CONTENT]
-    Put this tag before the Image: [IMAGE]
-    Put this tag after the Image: [/IMAGE]
-
-    Elaborate on the Content, provide as much information as possible.
-    You put a [/CONTENT] at the end of the Content.
-    Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
-    Do not include any special characters (?, !, ., :, ) in the Title.
-    Do not include any additional information in your response and stick to the format."""
-
+async def process_ppt_prompt(message):
     answer = None
     while answer is None:
         try:
@@ -100,9 +100,15 @@ async def generate_ppt(topic, slide_length):
                 **OPENAI_COMPLETION_OPTIONS
             )
             answer = response['choices'][0]['message']['content']
+            n_used_tokens = response.usage.total_tokens
         except openai.error.InvalidRequestError as e:  # too many tokens
             raise ValueError("Too many tokens to make completion") from e
+    return answer, n_used_tokens
 
+
+async def generate_ppt(answer):
+    template = os.path.join("bot", "ai_generator", "presentation_templates", "sample.pptx")
+    root = Presentation(template)
 
     # """ Ref for slide types:
     # 0 -> title and subtitle
@@ -149,7 +155,6 @@ async def generate_ppt(topic, slide_length):
                                          filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
         slide.shapes.add_picture(io.BytesIO(image_data), slide.placeholders[1].left, slide.placeholders[1].top,
                                  slide.placeholders[1].width, slide.placeholders[1].height)
-    # PIL.UnidentifiedImageError: cannot identify image file <_io.BytesIO object at 0x7f89d6bdbc40>
 
     def find_text_in_between_tags(text, start_tag, end_tag):
         start_pos = text.find(start_tag)
@@ -197,11 +202,7 @@ async def generate_ppt(topic, slide_length):
         return root.slides[0].shapes.title.text
 
     delete_all_slides()
-
-    print(response)
-
     parse_response(answer)
-
     buffer = io.BytesIO()
     root.save(buffer)
     pptx_bytes = buffer.getvalue()
