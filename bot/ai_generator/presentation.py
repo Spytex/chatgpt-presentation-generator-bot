@@ -18,7 +18,7 @@ openai.api_key = config.openai_api_key
 
 OPENAI_COMPLETION_OPTIONS = {
     "temperature": 0,
-    "max_tokens": 1000,
+    "max_tokens": 2048,
     "top_p": 1,
     "frequency_penalty": 0,
     "presence_penalty": 0
@@ -62,11 +62,9 @@ async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
 
         [L_CS] 
         [TITLE]Mental Health Definition[/TITLE]
-        [CONTENT]
-        1. Definition: A person’s condition with regard to their psychological and emotional well-being
+        [CONTENT]1. Definition: A person’s condition with regard to their psychological and emotional well-being
         2. Can impact one's physical health
-        3. Stigmatized too often.
-        [/CONTENT]
+        3. Stigmatized too often.[/CONTENT]
 
         [SLIDEBREAK]
 
