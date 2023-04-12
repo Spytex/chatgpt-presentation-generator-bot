@@ -31,7 +31,6 @@ from telegram.ext import (
 from telegram.constants import ParseMode, ChatAction
 import config
 import database
-import openai_utils
 import ai_generator.presentation as presentation
 
 # setup
@@ -76,14 +75,14 @@ async def register_user_if_not_exists(update: Update, context: CallbackContext, 
 async def start_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
-    
+
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
-    
+
     reply_text = "Hi! I'm bot implemented with ChatGPT integration 🤖\n\n"
     reply_text += HELP_MESSAGE
 
     reply_text += "\nAnd now... choose what you want!"
-    
+
     await update.message.reply_text(reply_text, parse_mode=ParseMode.HTML)
 
 
@@ -99,7 +98,7 @@ async def message_handle(update: Update, context: CallbackContext, message=None)
     if update.edited_message is not None:
         await edited_message_handle(update, context)
         return
-        
+
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
 
@@ -138,17 +137,17 @@ async def set_chat_mode_handle(update: Update, context: CallbackContext):
     await query.edit_message_text(f"{CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
 
 
-
-SELECTING_ACTION, SELECTING_LANGUAGE, SELECTING_TEMPLATE, SELECTING_TYPE, SELECTING_SLIDE_COUNT, INPUT_TOPIC, INPUT_PROMPT = map(chr, range(7))
+SELECTING_ACTION, SELECTING_LANGUAGE, SELECTING_TEMPLATE, SELECTING_TYPE, SELECTING_SLIDE_COUNT, INPUT_TOPIC, \
+    INPUT_PROMPT = map(chr, range(7))
 END = ConversationHandler.END
 PRESENTATION = "Presentation"
 ABSTRACT = "Abstract"
-LANGUAGES = ["English", "Spanish", "French", "German", "Chinese"]   # Should have the same count with flags
-LANGUAGES_EMOJI = ["🇬🇧", "🇪🇸", "🇫🇷", "🇩🇪", "🇨🇳", "🇨🇳", "🇨🇳", "🇨🇳"]  # Should have the same count with languages
-TEMPLATES = ["Simple", "Professional", "Creative", "Modern"]
-TEMPLATES_EMOJI = ["🇬🇧", "🇪🇸", "🇫🇷", "🇩🇪", "🇨🇳", "🇨🇳", "🇨🇳", "🇨🇳"]
+LANGUAGES = ["English", "Ukrainian", "Polish", "Russian", "Spanish", "French", "German", "Italian", "Portuguese"]
+LANGUAGES_EMOJI = ["🇬🇧", "🇺🇦", "🇵🇱", "🏳️", "🇪🇸", "🇫🇷", "🇩🇪", "🇮🇹", "🇵🇹"]  # Should have the same count with languages
+TEMPLATES = ["Simple", "Professional", "Organic", "Modern"]
+TEMPLATES_EMOJI = ["😊", "👔", "🌿", "🚀"]
 TYPES = ["Fun", "Serious", "Creative", "Informative", "Inspirational", "Motivational", "Educational"]
-TYPES_EMOJI = ["🇬🇧", "🇪🇸", "🇫🇷", "🇩🇪", "🇨🇳", "🇨🇳", "🇨🇳", "🇨🇳"]
+TYPES_EMOJI = ["😂", "😐", "🎨", "📚", "🌟", "💪", "🎓"]
 COUNTS = [str(i) for i in range(3, 15)]
 BACK = "⬅️Back"
 MENU = "⬅️Menu"
@@ -172,7 +171,7 @@ async def menu_handle(update: Update, context: CallbackContext) -> str:
         await register_user_if_not_exists(update, context, update.message.from_user)
 
         try:
-            await context.bot.deleteMessage(message_id=context.user_data[MESSAGE_ID].message_id-1,
+            await context.bot.deleteMessage(message_id=context.user_data[MESSAGE_ID].message_id - 1,
                                             chat_id=context.user_data[MESSAGE_ID].chat_id)
             await context.bot.deleteMessage(message_id=context.user_data[MESSAGE_ID].message_id,
                                             chat_id=context.user_data[MESSAGE_ID].chat_id)
@@ -191,12 +190,13 @@ async def menu_handle(update: Update, context: CallbackContext) -> str:
         await update.callback_query.answer()
         await update.callback_query.edit_message_text("Menu:", reply_markup=InlineKeyboardMarkup(keyboard))
     else:
-        context.user_data[MESSAGE_ID] = await update.message.reply_text("Menu:", reply_markup=InlineKeyboardMarkup(keyboard))
+        context.user_data[MESSAGE_ID] = await update.message.reply_text("Menu:",
+                                                                        reply_markup=InlineKeyboardMarkup(keyboard))
     context.user_data[START_OVER] = False
     return SELECTING_ACTION
 
 
-async def language_callback(update: Update, context: CallbackContext) -> str:   # flags inline buttons
+async def language_callback(update: Update, context: CallbackContext) -> str:  # flags inline buttons
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
@@ -205,9 +205,11 @@ async def language_callback(update: Update, context: CallbackContext) -> str:   
     keyboard = []
     for i, languages in enumerate(LANGUAGES):
         if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(LANGUAGES_EMOJI[i] + languages, callback_data=f"language_{languages}")])
+            keyboard.append([InlineKeyboardButton(LANGUAGES_EMOJI[i] + languages,
+                                                  callback_data=f"language_{languages}")])
         else:
-            keyboard[-1].append(InlineKeyboardButton(LANGUAGES_EMOJI[i] + languages, callback_data=f"language_{languages}"))
+            keyboard[-1].append(InlineKeyboardButton(LANGUAGES_EMOJI[i] + languages,
+                                                     callback_data=f"language_{languages}"))
     keyboard.append([InlineKeyboardButton(text=BACK, callback_data=str(END))])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.answer()
@@ -215,7 +217,7 @@ async def language_callback(update: Update, context: CallbackContext) -> str:   
     return SELECTING_LANGUAGE
 
 
-async def template_callback(update: Update, context: CallbackContext) -> str:   # many inline buttons
+async def template_callback(update: Update, context: CallbackContext) -> str:  # many inline buttons
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
@@ -224,9 +226,11 @@ async def template_callback(update: Update, context: CallbackContext) -> str:   
     keyboard = []
     for i, templates in enumerate(TEMPLATES):
         if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(TEMPLATES_EMOJI[i] + templates, callback_data=f"template_{templates}")])
+            keyboard.append([InlineKeyboardButton(TEMPLATES_EMOJI[i] + templates,
+                                                  callback_data=f"template_{templates}")])
         else:
-            keyboard[-1].append(InlineKeyboardButton(TEMPLATES_EMOJI[i] + templates, callback_data=f"template_{templates}"))
+            keyboard[-1].append(InlineKeyboardButton(TEMPLATES_EMOJI[i] + templates,
+                                                     callback_data=f"template_{templates}"))
     keyboard.append([InlineKeyboardButton(text=MENU, callback_data=str(END))])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.answer()
@@ -292,10 +296,13 @@ async def topic_callback(update: Update, context: CallbackContext) -> str:  # us
 
 
 async def save_input(update: Update, context: CallbackContext):  # user message
+    if update.edited_message is not None:
+        return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_data = context.user_data
     user_data[TOPIC_CHOICE] = update.message.text
     user_id = update.message.from_user.id
+    message_id = update.message.message_id
     user_mode = db.get_user_attribute(user_id, "current_chat_mode")
     menu_choice = user_data[MENU_CHOICE]
     match menu_choice:
@@ -308,9 +315,25 @@ async def save_input(update: Update, context: CallbackContext):  # user message
             prompt = await presentation.generate_ppt_prompt(language_choice, type_choice, count_slide_choice,
                                                             topic_choice)
             if user_mode == "auto":
-                response, n_used_tokens = await presentation.process_ppt_prompt(prompt)
-                pptx_bytes, pptx_title = await presentation.generate_ppt(response)
-                await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+                available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
+                if available_tokens > 0:
+                    used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+                    try:
+                        response, n_used_tokens = await presentation.process_ppt_prompt(prompt)
+                    except OverflowError:
+                        await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
+                                                        reply_to_message_id=message_id)
+                        return END
+                    except RuntimeError:
+                        await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                                                        reply_to_message_id=message_id)
+                        return END
+                    db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
+                    db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
+                    pptx_bytes, pptx_title = await presentation.generate_ppt(response, template_choice)
+                    await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+                else:
+                    await update.message.reply_text("You have not enough tokens.")
             else:
                 await update.message.reply_text(text=prompt)
                 return INPUT_PROMPT
@@ -323,15 +346,18 @@ async def save_input(update: Update, context: CallbackContext):  # user message
 
 
 async def prompt_callback(update: Update, context: CallbackContext):  # user message, skip if mode == auto
+    if update.edited_message is not None:
+        return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_data = context.user_data
     user_data[API_RESPONSE] = update.message.text
     menu_choice = user_data[MENU_CHOICE]
+    template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
     match menu_choice:
         case "Presentation":
             api_response = user_data[API_RESPONSE]
             try:
-                pptx_bytes, pptx_title = await presentation.generate_ppt(api_response)
+                pptx_bytes, pptx_title = await presentation.generate_ppt(api_response, template_choice)
                 await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
             except IndexError:
                 await update.message.reply_text("Check inserted data and try again!")
@@ -397,7 +423,7 @@ async def buy_tokens_callback(update: Update, context: CallbackContext):
     # Create an invoice
     title = f"{token_amount} tokens"
     description = f"Purchase of {token_amount} tokens for the chat bot"
-    payload = f"{user_id}-{token_amount}" # Custom payload to identify the user and token amount
+    payload = f"{user_id}-{token_amount}"  # Custom payload to identify the user and token amount
     currency = "USD"
     prices = [LabeledPrice("Test", int(float(price) * 100))]
     # Send the invoice to the user
@@ -424,7 +450,7 @@ async def successful_payment_handle(update: Update, context: CallbackContext):
     payment_chat_id = int(payment_info[0])
     payment_tokens = int(payment_info[1])
     n_available_tokens = db.get_user_attribute(payment_chat_id, "n_available_tokens")
-    db.set_user_attribute(payment_chat_id, "n_available_tokens", n_available_tokens+payment_tokens)
+    db.set_user_attribute(payment_chat_id, "n_available_tokens", n_available_tokens + payment_tokens)
     db.set_user_attribute(payment_chat_id, "last_invoice_payload", payment.invoice_payload)
     await update.message.reply_text("Thank you for your payment!")
 
@@ -434,7 +460,7 @@ async def edited_message_handle(update: Update, context: CallbackContext):
     await update.edited_message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
-async def error_handle(update: object, context:  ContextTypes.DEFAULT_TYPE) -> None:
+async def error_handle(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
 
     try:
@@ -496,7 +522,7 @@ def run_bot() -> None:
         fallbacks=[
             CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$"),
             CommandHandler("menu", menu_handle, filters=user_filter)
-                   ],
+        ],
         map_to_parent={
             END: SELECTING_ACTION,
         },
@@ -522,9 +548,9 @@ def run_bot() -> None:
     )
 
     selection_handlers = [
-            presentation_conv,
-            abstract_conv,
-        ]
+        presentation_conv,
+        abstract_conv,
+    ]
 
     menu_conv_handler = ConversationHandler(
         entry_points=[CommandHandler("menu", menu_handle, filters=user_filter)],
@@ -543,7 +569,7 @@ def run_bot() -> None:
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handle))
 
     application.add_error_handler(error_handle)
-    
+
     # start the bot
     application.run_polling()
 

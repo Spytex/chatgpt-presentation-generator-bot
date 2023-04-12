@@ -103,11 +103,15 @@ async def process_ppt_prompt(message):
             n_used_tokens = response.usage.total_tokens
         except openai.error.InvalidRequestError as e:  # too many tokens
             raise ValueError("Too many tokens to make completion") from e
+        except openai.error.RateLimitError as e:
+            raise OverflowError("That model is currently overloaded with other requests.") from e
+        except openai.error.APIError as e:
+            raise RuntimeError("HTTP code 502 from API") from e
     return answer, n_used_tokens
 
 
-async def generate_ppt(answer):
-    template = os.path.join("bot", "ai_generator", "presentation_templates", "sample.pptx")
+async def generate_ppt(answer, template):
+    template = os.path.join("bot", "ai_generator", "presentation_templates", f"{template}.pptx")
     root = Presentation(template)
 
     # """ Ref for slide types:
@@ -150,11 +154,13 @@ async def generate_ppt(answer):
         slide = root.slides.add_slide(layout)
         slide.shapes.title.text = title
         slide.placeholders[2].text = content
+
         refresh_bad_coding_practice()
-        image_data = downloader.download(image_query, limit=1, adult_filter_off=True, timeout=60,
+        image_data = downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
                                          filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
-        slide.shapes.add_picture(io.BytesIO(image_data), slide.placeholders[1].left, slide.placeholders[1].top,
-                                 slide.placeholders[1].width, slide.placeholders[1].height)
+        slide.placeholders[1].insert_picture(io.BytesIO(image_data))
+        # slide.shapes.add_picture(io.BytesIO(image_data), slide.placeholders[1].left, slide.placeholders[1].top,
+        #                          slide.placeholders[1].width, slide.placeholders[1].height)
 
     def find_text_in_between_tags(text, start_tag, end_tag):
         start_pos = text.find(start_tag)
