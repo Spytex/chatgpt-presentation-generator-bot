@@ -32,6 +32,7 @@ from telegram.constants import ParseMode, ChatAction
 import config
 import database
 import ai_generator.presentation as presentation
+import ai_generator.openai_utils as openai_utils
 
 # setup
 db = database.Database()
@@ -320,7 +321,7 @@ async def save_input(update: Update, context: CallbackContext):  # user message
                 if available_tokens > 0:
                     used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
                     try:
-                        response, n_used_tokens = await presentation.process_ppt_prompt(prompt)
+                        response, n_used_tokens = await openai_utils.process_prompt(prompt)
                     except OverflowError:
                         await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
                                                         reply_to_message_id=message_id)

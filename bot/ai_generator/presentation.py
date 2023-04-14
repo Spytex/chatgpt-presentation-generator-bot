@@ -4,35 +4,12 @@ import re
 import string
 import io
 
-import openai
-import config
 from pptx import Presentation
 
 try:
     from image_scrapper import downloader
 except ImportError:
     from .image_scrapper import downloader
-
-
-openai.api_key = config.openai_api_key
-
-OPENAI_COMPLETION_OPTIONS = {
-    "temperature": 0,
-    "max_tokens": 2048,
-    "top_p": 1,
-    "frequency_penalty": 0,
-    "presence_penalty": 0
-}
-
-bad_coding_practice = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in
-                              range(16))
-
-
-async def refresh_bad_coding_practice():
-    global bad_coding_practice
-    bad_coding_practice = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits)
-                                  for _ in range(16))
-    return
 
 
 async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
@@ -86,28 +63,6 @@ async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
     return message
 
 
-async def process_ppt_prompt(message):
-    answer = None
-    while answer is None:
-        try:
-            response = await openai.ChatCompletion.acreate(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "user", "content": message}
-                ],
-                **OPENAI_COMPLETION_OPTIONS
-            )
-            answer = response['choices'][0]['message']['content']
-            n_used_tokens = response.usage.total_tokens
-        except openai.error.InvalidRequestError as e:  # too many tokens
-            raise ValueError("Too many tokens to make completion") from e
-        except openai.error.RateLimitError as e:
-            raise OverflowError("That model is currently overloaded with other requests.") from e
-        except openai.error.APIError as e:
-            raise RuntimeError("HTTP code 502 from API") from e
-    return answer, n_used_tokens
-
-
 async def generate_ppt(answer, template):
     template = os.path.join("bot", "ai_generator", "presentation_templates", f"{template}.pptx")
     root = Presentation(template)
@@ -153,7 +108,6 @@ async def generate_ppt(answer, template):
         slide.shapes.title.text = title
         slide.placeholders[2].text = content
 
-        refresh_bad_coding_practice()
         image_data = downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
                                          filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
         slide.placeholders[1].insert_picture(io.BytesIO(image_data))
