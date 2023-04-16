@@ -1,7 +1,5 @@
 import os
-import random
 import re
-import string
 import io
 
 from pptx import Presentation
@@ -111,8 +109,6 @@ async def generate_ppt(answer, template):
         image_data = downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
                                          filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
         slide.placeholders[1].insert_picture(io.BytesIO(image_data))
-        # slide.shapes.add_picture(io.BytesIO(image_data), slide.placeholders[1].left, slide.placeholders[1].top,
-        #                          slide.placeholders[1].width, slide.placeholders[1].height)
 
     def find_text_in_between_tags(text, start_tag, end_tag):
         start_pos = text.find(start_tag)
@@ -165,6 +161,6 @@ async def generate_ppt(answer, template):
     root.save(buffer)
     pptx_bytes = buffer.getvalue()
     pptx_title = f"{find_title()}.pptx"
-    print("done")
+    print(f"done {pptx_title}")
 
     return pptx_bytes, pptx_title

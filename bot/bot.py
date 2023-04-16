@@ -1,10 +1,7 @@
-import os
 import logging
 import traceback
 import html
 import json
-import tempfile
-from pathlib import Path
 from datetime import datetime
 
 import telegram
@@ -28,10 +25,11 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler,
 )
-from telegram.constants import ParseMode, ChatAction
+from telegram.constants import ParseMode
 import config
 import database
 import ai_generator.presentation as presentation
+import ai_generator.abstract as abstract
 import ai_generator.openai_utils as openai_utils
 
 # setup
@@ -167,9 +165,9 @@ MENU = "⬅️Menu"
 
 
 async def menu_handle(update: Update, context: CallbackContext) -> str:
-    if context.user_data.get(START_OVER):
+    try:
         await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
-    else:
+    except AttributeError:
         await register_user_if_not_exists(update, context, update.message.from_user)
 
         try:
@@ -344,6 +342,30 @@ async def save_input(update: Update, context: CallbackContext):  # user message
             language_choice = user_data[LANGUAGE_CHOICE].replace("language_", "")
             type_choice = user_data[TYPE_CHOICE].replace("type_", "")
             topic_choice = user_data[TOPIC_CHOICE]
+            prompt = await abstract.generate_docx_prompt(language_choice, type_choice, topic_choice)
+            if user_mode == "auto":
+                available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
+                if available_tokens > 0:
+                    used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+                    try:
+                        response, n_used_tokens = await openai_utils.process_prompt(prompt)
+                    except OverflowError:
+                        await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
+                                                        reply_to_message_id=message_id)
+                        return END
+                    except RuntimeError:
+                        await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                                                        reply_to_message_id=message_id)
+                        return END
+                    db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
+                    db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
+                    docx_bytes, docx_title = await abstract.generate_docx(response)
+                    await update.message.reply_document(document=docx_bytes, filename=docx_title)
+                else:
+                    await update.message.reply_text("You have not enough tokens.")
+            else:
+                await update.message.reply_text(text=prompt)
+                return INPUT_PROMPT
     return END
 
 
@@ -354,10 +376,10 @@ async def prompt_callback(update: Update, context: CallbackContext):  # user mes
     user_data = context.user_data
     user_data[API_RESPONSE] = update.message.text
     menu_choice = user_data[MENU_CHOICE]
-    template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
+    api_response = user_data[API_RESPONSE]
     match menu_choice:
         case "Presentation":
-            api_response = user_data[API_RESPONSE]
+            template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
             try:
                 pptx_bytes, pptx_title = await presentation.generate_ppt(api_response, template_choice)
                 await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
@@ -365,8 +387,12 @@ async def prompt_callback(update: Update, context: CallbackContext):  # user mes
                 await update.message.reply_text("Check inserted data and try again!")
                 return INPUT_PROMPT
         case "Abstract":
-            pass
-
+            try:
+                docx_bytes, docx_title = await abstract.generate_docx(api_response)
+                await update.message.reply_document(document=docx_bytes, filename=docx_title)
+            except IndexError:
+                await update.message.reply_text("Check inserted data and try again!")
+                return INPUT_PROMPT
     return END
 
 
