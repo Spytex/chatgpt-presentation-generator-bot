@@ -77,40 +77,40 @@ async def generate_ppt(answer, template):
     # 8 -> Pic with caption
     # """
 
-    def delete_all_slides():
+    async def delete_all_slides():
         for i in range(len(root.slides) - 1, -1, -1):
             r_id = root.slides._sldIdLst[i].rId
             root.part.drop_rel(r_id)
             del root.slides._sldIdLst[i]
 
-    def create_title_slide(title, subtitle):
+    async def create_title_slide(title, subtitle):
         layout = root.slide_layouts[0]
         slide = root.slides.add_slide(layout)
         slide.shapes.title.text = title
         slide.placeholders[1].text = subtitle
 
-    def create_section_header_slide(title):
+    async def create_section_header_slide(title):
         layout = root.slide_layouts[2]
         slide = root.slides.add_slide(layout)
         slide.shapes.title.text = title
 
-    def create_title_and_content_slide(title, content):
+    async def create_title_and_content_slide(title, content):
         layout = root.slide_layouts[1]
         slide = root.slides.add_slide(layout)
         slide.shapes.title.text = title
         slide.placeholders[1].text = content
 
-    def create_title_and_content_and_image_slide(title, content, image_query):
+    async def create_title_and_content_and_image_slide(title, content, image_query):
         layout = root.slide_layouts[8]
         slide = root.slides.add_slide(layout)
         slide.shapes.title.text = title
         slide.placeholders[2].text = content
 
-        image_data = downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
-                                         filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
+        image_data = await downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
+                                               filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
         slide.placeholders[1].insert_picture(io.BytesIO(image_data))
 
-    def find_text_in_between_tags(text, start_tag, end_tag):
+    async def find_text_in_between_tags(text, start_tag, end_tag):
         start_pos = text.find(start_tag)
         end_pos = text.find(end_tag)
         result = []
@@ -126,41 +126,41 @@ async def generate_ppt(answer, template):
         else:
             return ""
 
-    def search_for_slide_type(text):
+    async def search_for_slide_type(text):
         tags = ["[L_TS]", "[L_CS]", "[L_IS]", "[L_THS]"]
         found_text = next((s for s in tags if s in text), None)
         return found_text
 
-    def parse_response(reply):
+    async def parse_response(reply):
         list_of_slides = reply.split("[SLIDEBREAK]")
         for slide in list_of_slides:
-            slide_type = search_for_slide_type(slide)
+            slide_type = await search_for_slide_type(slide)
             if slide_type == "[L_TS]":
-                create_title_slide(find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]"),
-                                   find_text_in_between_tags(str(slide), "[SUBTITLE]", "[/SUBTITLE]"))
+                await create_title_slide(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]"),
+                                   await find_text_in_between_tags(str(slide), "[SUBTITLE]", "[/SUBTITLE]"))
             elif slide_type == "[L_CS]":
-                create_title_and_content_slide("".join(find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")),
-                                               "".join(find_text_in_between_tags(str(slide), "[CONTENT]",
+                await create_title_and_content_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")),
+                                               "".join(await find_text_in_between_tags(str(slide), "[CONTENT]",
                                                                                  "[/CONTENT]")))
             elif slide_type == "[L_IS]":
-                create_title_and_content_and_image_slide("".join(find_text_in_between_tags(str(slide), "[TITLE]",
+                await create_title_and_content_and_image_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]",
                                                                                            "[/TITLE]")),
-                                                         "".join(find_text_in_between_tags(str(slide), "[CONTENT]",
+                                                         "".join(await find_text_in_between_tags(str(slide), "[CONTENT]",
                                                                                            "[/CONTENT]")),
-                                                         "".join(find_text_in_between_tags(str(slide), "[IMAGE]",
+                                                         "".join(await find_text_in_between_tags(str(slide), "[IMAGE]",
                                                                                            "[/IMAGE]")))
             elif slide_type == "[L_THS]":
-                create_section_header_slide("".join(find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")))
+                await create_section_header_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")))
 
-    def find_title():
+    async def find_title():
         return root.slides[0].shapes.title.text
 
-    delete_all_slides()
-    parse_response(answer)
+    await delete_all_slides()
+    await parse_response(answer)
     buffer = io.BytesIO()
     root.save(buffer)
     pptx_bytes = buffer.getvalue()
-    pptx_title = f"{find_title()}.pptx"
+    pptx_title = f"{await find_title()}.pptx"
     print(f"done {pptx_title}")
 
     return pptx_bytes, pptx_title

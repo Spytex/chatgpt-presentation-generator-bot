@@ -4,15 +4,15 @@ except ImportError:
     from .bing import Bing
 
 
-def download(query, limit=100, adult_filter_off=True,
-             timeout=60, filter="", verbose=True):
+async def download(query, limit=100, adult_filter_off=True,
+                   timeout=60, filter="", verbose=True):
     if adult_filter_off:
         adult = 'off'
     else:
         adult = 'on'
 
     bing = Bing(query, limit, adult, timeout, filter, verbose)
-    bing.run()
+    await bing.run()
     return bing.image
 
 

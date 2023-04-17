@@ -45,12 +45,12 @@ async def generate_docx_prompt(language, emotion_type, topic):
 async def generate_docx(answer):
     doc = Document()
 
-    def split_tags(reply):
+    async def split_tags(reply):
         pattern = r'\[(.*?)\](.*?)\[/\1\]'
         tags = re.findall(pattern, reply, re.DOTALL)
         return tags
 
-    def parse_response(tags_array):
+    async def parse_response(tags_array):
         if not tags_array:
             raise IndexError
         for item in tags_array:
@@ -65,23 +65,23 @@ async def generate_docx(answer):
                     doc.add_paragraph(item[1])
                 case('IMAGE'):
                     try:
-                        image_data = downloader.download(item[1], limit=1, adult_filter_off=True, timeout=15,
-                                                         filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
+                        image_data = await downloader.download(item[1], limit=1, adult_filter_off=True, timeout=15,
+                                                               filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
                         doc.add_picture(io.BytesIO(image_data), width=Inches(6))
                     except Exception:
                         pass
 
-    def find_title(tags_array):
+    async def find_title(tags_array):
         for item in tags_array:
             if item[0] == 'TITLE':
                 return item[1]
 
-    reply_array = split_tags(answer)
-    parse_response(reply_array)
+    reply_array = await split_tags(answer)
+    await parse_response(reply_array)
     buffer = io.BytesIO()
     doc.save(buffer)
     docx_bytes = buffer.getvalue()
-    docx_title = f"{find_title(reply_array)}.docx"
+    docx_title = f"{await find_title(reply_array)}.docx"
     print(f"done {docx_title}")
 
     return docx_bytes, docx_title
