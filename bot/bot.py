@@ -169,13 +169,11 @@ async def menu_handle(update: Update, context: CallbackContext) -> str:
         await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     except AttributeError:
         await register_user_if_not_exists(update, context, update.message.from_user)
-
         try:
-            await context.bot.deleteMessage(message_id=context.user_data[MESSAGE_ID].message_id - 1,
-                                            chat_id=context.user_data[MESSAGE_ID].chat_id)
-            await context.bot.deleteMessage(message_id=context.user_data[MESSAGE_ID].message_id,
-                                            chat_id=context.user_data[MESSAGE_ID].chat_id)
-        except Exception:
+            if MESSAGE_ID in context.chat_data:
+                await context.bot.delete_message(chat_id=update.effective_chat.id,
+                                                 message_id=context.chat_data[MESSAGE_ID].message_id)
+        except telegram.error.BadRequest:
             pass
 
     keyboard = [
@@ -190,7 +188,7 @@ async def menu_handle(update: Update, context: CallbackContext) -> str:
         await update.callback_query.answer()
         await update.callback_query.edit_message_text("Menu:", reply_markup=InlineKeyboardMarkup(keyboard))
     else:
-        context.user_data[MESSAGE_ID] = await update.message.reply_text("Menu:",
+        context.chat_data[MESSAGE_ID] = await update.message.reply_text("Menu:",
                                                                         reply_markup=InlineKeyboardMarkup(keyboard))
     context.user_data[START_OVER] = False
     return SELECTING_ACTION
