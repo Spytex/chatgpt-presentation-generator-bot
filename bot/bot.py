@@ -103,9 +103,6 @@ async def message_handle(update: Update, context: CallbackContext, message=None)
 
     db.set_user_attribute(user_id, "last_interaction", datetime.now())
 
-    # # send typing action
-    # await update.message.chat.send_action(action="typing")  ###
-
 
 async def show_chat_modes_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
@@ -123,16 +120,10 @@ async def show_chat_modes_handle(update: Update, context: CallbackContext):
 async def set_chat_mode_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     user_id = update.callback_query.from_user.id
-
     query = update.callback_query
     await query.answer()
-
     chat_mode = query.data.split("|")[1]
-
     db.set_user_attribute(user_id, "current_chat_mode", chat_mode)
-
-    # await query.edit_message_text(f"<b>{CHAT_MODES[chat_mode]['name']}</b> mode is set", parse_mode=ParseMode.HTML)
-
     await query.edit_message_text(f"{CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
 
 
@@ -142,7 +133,7 @@ END = ConversationHandler.END
 PRESENTATION = "Presentation"
 ABSTRACT = "Abstract"
 LANGUAGES = ["English", "Ukrainian", "Polish", "Russian", "Spanish", "French", "German", "Italian", "Portuguese"]
-LANGUAGES_EMOJI = ["🇬🇧", "🇺🇦", "🇵🇱", "🏳️", "🇪🇸", "🇫🇷", "🇩🇪", "🇮🇹", "🇵🇹"]  # Should have the same count with languages
+LANGUAGES_EMOJI = ["🇬🇧", "🇺🇦", "🇵🇱", "🏳️", "🇪🇸", "🇫🇷", "🇩🇪", "🇮🇹", "🇵🇹"]
 TEMPLATES = ["Mountains", "Organic", "East Asia", "Explore", "3D Float", "Luminous", "Academic"]
 TEMPLATES_EMOJI = ["🗻", "🌿", "🐼", "🧭", "🌑", "🕯️", "🎓"]
 TYPES = ["Fun", "Serious", "Creative", "Informative", "Inspirational", "Motivational", "Educational", "Historical",
@@ -153,15 +144,17 @@ BACK = "⬅️Back"
 MENU = "⬅️Menu"
 (
     MENU_CHOICE,
-    LANGUAGE_CHOICE,
+    PRESENTATION_LANGUAGE_CHOICE,
+    ABSTRACT_LANGUAGE_CHOICE,
     TEMPLATE_CHOICE,
-    TYPE_CHOICE,
+    PRESENTATION_TYPE_CHOICE,
+    ABSTRACT_TYPE_CHOICE,
     COUNT_SLIDE_CHOICE,
     TOPIC_CHOICE,
     API_RESPONSE,
     START_OVER,
     MESSAGE_ID,
-) = map(chr, range(10, 19))
+) = map(chr, range(10, 21))
 
 
 async def menu_handle(update: Update, context: CallbackContext) -> str:
@@ -194,43 +187,38 @@ async def menu_handle(update: Update, context: CallbackContext) -> str:
     return SELECTING_ACTION
 
 
-async def language_callback(update: Update, context: CallbackContext) -> str:  # flags inline buttons
+async def generate_keyboard(word_array, emoji_array, callback):
+    keyboard = []
+    for i, words in enumerate(word_array):
+        if i % 3 == 0:
+            keyboard.append([InlineKeyboardButton(emoji_array[i] + words,
+                                                  callback_data=f"{callback}{words}")])
+        else:
+            keyboard[-1].append(InlineKeyboardButton(emoji_array[i] + words,
+                                                     callback_data=f"{callback}{words}"))
+    keyboard.append([InlineKeyboardButton(text=BACK, callback_data=str(END))])
+    return InlineKeyboardMarkup(keyboard)
+
+
+async def language_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
     context.user_data[MENU_CHOICE] = data
     text = f"Choose language of your {data}:"
-    keyboard = []
-    for i, languages in enumerate(LANGUAGES):
-        if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(LANGUAGES_EMOJI[i] + languages,
-                                                  callback_data=f"language_{languages}")])
-        else:
-            keyboard[-1].append(InlineKeyboardButton(LANGUAGES_EMOJI[i] + languages,
-                                                     callback_data=f"language_{languages}"))
-    keyboard.append([InlineKeyboardButton(text=BACK, callback_data=str(END))])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = await generate_keyboard(LANGUAGES, LANGUAGES_EMOJI, "language_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
     return SELECTING_LANGUAGE
 
 
-async def template_callback(update: Update, context: CallbackContext) -> str:  # many inline buttons
+async def template_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[LANGUAGE_CHOICE] = data
+    context.user_data[PRESENTATION_LANGUAGE_CHOICE] = data
     text = f"Choose template of your {context.user_data[MENU_CHOICE]}:"
-    keyboard = []
-    for i, templates in enumerate(TEMPLATES):
-        if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(TEMPLATES_EMOJI[i] + templates,
-                                                  callback_data=f"template_{templates}")])
-        else:
-            keyboard[-1].append(InlineKeyboardButton(TEMPLATES_EMOJI[i] + templates,
-                                                     callback_data=f"template_{templates}"))
-    keyboard.append([InlineKeyboardButton(text=MENU, callback_data=str(END))])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = await generate_keyboard(TEMPLATES, TEMPLATES_EMOJI, "template_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
     return SELECTING_TEMPLATE
@@ -244,26 +232,19 @@ async def type_callback(update: Update, context: CallbackContext) -> str:
         case "Presentation":
             context.user_data[TEMPLATE_CHOICE] = data
         case "Abstract":
-            context.user_data[LANGUAGE_CHOICE] = data
+            context.user_data[ABSTRACT_LANGUAGE_CHOICE] = data
     text = f"Choose type of your {context.user_data[MENU_CHOICE]}"
-    keyboard = []
-    for i, types in enumerate(TYPES):
-        if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(TYPES_EMOJI[i] + types, callback_data=f"type_{types}")])
-        else:
-            keyboard[-1].append(InlineKeyboardButton(TYPES_EMOJI[i] + types, callback_data=f"type_{types}"))
-    keyboard.append([InlineKeyboardButton(text=MENU, callback_data=str(END))])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
     return SELECTING_TYPE
 
 
-async def slide_count_callback(update: Update, context: CallbackContext) -> str:  # many inline buttons ?3-12?
+async def slide_count_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[TYPE_CHOICE] = data
+    context.user_data[PRESENTATION_TYPE_CHOICE] = data
     text = f"Choose the number of slides for your {context.user_data[MENU_CHOICE]}:"
     keyboard = []
     for i, counts in enumerate(COUNTS):
@@ -272,13 +253,13 @@ async def slide_count_callback(update: Update, context: CallbackContext) -> str:
         else:
             keyboard[-1].append(InlineKeyboardButton(counts, callback_data=f"slide_count_{counts}"))
     keyboard.append([InlineKeyboardButton(text=MENU, callback_data=str(END))])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
     return SELECTING_SLIDE_COUNT
 
 
-async def topic_callback(update: Update, context: CallbackContext) -> str:  # user message
+async def topic_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
@@ -287,7 +268,7 @@ async def topic_callback(update: Update, context: CallbackContext) -> str:  # us
         case "Presentation":
             context.user_data[COUNT_SLIDE_CHOICE] = data
         case "Abstract":
-            context.user_data[TYPE_CHOICE] = data
+            context.user_data[ABSTRACT_TYPE_CHOICE] = data
     await query.answer()
     await query.edit_message_text(text=text)
     return INPUT_TOPIC
@@ -305,9 +286,9 @@ async def save_input(update: Update, context: CallbackContext):  # user message
     menu_choice = user_data[MENU_CHOICE]
     match menu_choice:
         case "Presentation":
-            language_choice = user_data[LANGUAGE_CHOICE].replace("language_", "")
+            language_choice = user_data[PRESENTATION_LANGUAGE_CHOICE].replace("language_", "")
             template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
-            type_choice = user_data[TYPE_CHOICE].replace("type_", "")
+            type_choice = user_data[PRESENTATION_TYPE_CHOICE].replace("type_", "")
             count_slide_choice = user_data[COUNT_SLIDE_CHOICE].replace("slide_count_", "")
             topic_choice = user_data[TOPIC_CHOICE]
             prompt = await presentation.generate_ppt_prompt(language_choice, type_choice, count_slide_choice,
@@ -337,8 +318,8 @@ async def save_input(update: Update, context: CallbackContext):  # user message
                 return INPUT_PROMPT
 
         case "Abstract":
-            language_choice = user_data[LANGUAGE_CHOICE].replace("language_", "")
-            type_choice = user_data[TYPE_CHOICE].replace("type_", "")
+            language_choice = user_data[ABSTRACT_LANGUAGE_CHOICE].replace("language_", "")
+            type_choice = user_data[ABSTRACT_TYPE_CHOICE].replace("type_", "")
             topic_choice = user_data[TOPIC_CHOICE]
             prompt = await abstract.generate_docx_prompt(language_choice, type_choice, topic_choice)
             if user_mode == "auto":
@@ -367,7 +348,7 @@ async def save_input(update: Update, context: CallbackContext):  # user message
     return END
 
 
-async def prompt_callback(update: Update, context: CallbackContext):  # user message, skip if mode == auto
+async def prompt_callback(update: Update, context: CallbackContext):
     if update.edited_message is not None:
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
@@ -451,7 +432,7 @@ async def buy_tokens_callback(update: Update, context: CallbackContext):
     description = f"Purchase of {token_amount} tokens for the chat bot"
     payload = f"{user_id}-{token_amount}"  # Custom payload to identify the user and token amount
     currency = "USD"
-    prices = [LabeledPrice("Test", int(float(price) * 100))]
+    prices = [LabeledPrice("Purchase", int(float(price) * 100))]
     # Send the invoice to the user
     await context.bot.send_invoice(chat_id=user_id,
                                    title=title,
@@ -586,6 +567,7 @@ def run_bot() -> None:
         fallbacks=[
             CommandHandler("menu", menu_handle, filters=user_filter)
         ],
+        allow_reentry=True,
     )
     application.add_handler(menu_conv_handler, group=1)
 
