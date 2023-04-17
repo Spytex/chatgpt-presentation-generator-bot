@@ -135,22 +135,19 @@ async def generate_ppt(answer, template):
         list_of_slides = reply.split("[SLIDEBREAK]")
         for slide in list_of_slides:
             slide_type = await search_for_slide_type(slide)
-            if slide_type == "[L_TS]":
-                await create_title_slide(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]"),
-                                   await find_text_in_between_tags(str(slide), "[SUBTITLE]", "[/SUBTITLE]"))
-            elif slide_type == "[L_CS]":
-                await create_title_and_content_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")),
-                                               "".join(await find_text_in_between_tags(str(slide), "[CONTENT]",
-                                                                                 "[/CONTENT]")))
-            elif slide_type == "[L_IS]":
-                await create_title_and_content_and_image_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]",
-                                                                                           "[/TITLE]")),
-                                                         "".join(await find_text_in_between_tags(str(slide), "[CONTENT]",
-                                                                                           "[/CONTENT]")),
-                                                         "".join(await find_text_in_between_tags(str(slide), "[IMAGE]",
-                                                                                           "[/IMAGE]")))
-            elif slide_type == "[L_THS]":
-                await create_section_header_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")))
+            match slide_type:
+                case ("[L_TS]"):
+                    await create_title_slide(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]"),
+                                             await find_text_in_between_tags(str(slide), "[SUBTITLE]", "[/SUBTITLE]"))
+                case ("[L_CS]"):
+                    await create_title_and_content_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")),
+                                                         "".join(await find_text_in_between_tags(str(slide), "[CONTENT]", "[/CONTENT]")))
+                case ("[L_IS]"):
+                    await create_title_and_content_and_image_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")),
+                                                                   "".join(await find_text_in_between_tags(str(slide), "[CONTENT]", "[/CONTENT]")),
+                                                                   "".join(await find_text_in_between_tags(str(slide), "[IMAGE]", "[/IMAGE]")))
+                case ("[L_THS]"):
+                    await create_section_header_slide("".join(await find_text_in_between_tags(str(slide), "[TITLE]", "[/TITLE]")))
 
     async def find_title():
         return root.slides[0].shapes.title.text

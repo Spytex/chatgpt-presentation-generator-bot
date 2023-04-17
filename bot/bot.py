@@ -212,7 +212,7 @@ async def language_callback(update: Update, context: CallbackContext) -> str:
     return SELECTING_LANGUAGE
 
 
-async def template_callback(update: Update, context: CallbackContext) -> str:
+async def presentation_template_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
@@ -224,28 +224,36 @@ async def template_callback(update: Update, context: CallbackContext) -> str:
     return SELECTING_TEMPLATE
 
 
-async def type_callback(update: Update, context: CallbackContext) -> str:
+async def presentation_type_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    match context.user_data[MENU_CHOICE]:
-        case "Presentation":
-            context.user_data[TEMPLATE_CHOICE] = data
-        case "Abstract":
-            context.user_data[ABSTRACT_LANGUAGE_CHOICE] = data
-    text = f"Choose type of your {context.user_data[MENU_CHOICE]}"
+    context.user_data[TEMPLATE_CHOICE] = data
+    text = f"Choose type of your Presentation:"
     reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
     return SELECTING_TYPE
 
 
-async def slide_count_callback(update: Update, context: CallbackContext) -> str:
+async def abstract_type_callback(update: Update, context: CallbackContext) -> str:
+    await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
+    query = update.callback_query
+    data = query.data
+    context.user_data[ABSTRACT_LANGUAGE_CHOICE] = data
+    text = f"Choose type of your Abstract:"
+    reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
+    await query.answer()
+    await query.edit_message_text(text=text, reply_markup=reply_markup)
+    return SELECTING_TYPE
+
+
+async def presentation_slide_count_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
     context.user_data[PRESENTATION_TYPE_CHOICE] = data
-    text = f"Choose the number of slides for your {context.user_data[MENU_CHOICE]}:"
+    text = f"Choose the number of slides for your Presentation:"
     keyboard = []
     for i, counts in enumerate(COUNTS):
         if i % 3 == 0:
@@ -253,28 +261,35 @@ async def slide_count_callback(update: Update, context: CallbackContext) -> str:
         else:
             keyboard[-1].append(InlineKeyboardButton(counts, callback_data=f"slide_count_{counts}"))
     keyboard.append([InlineKeyboardButton(text=MENU, callback_data=str(END))])
-    reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
     return SELECTING_SLIDE_COUNT
 
 
-async def topic_callback(update: Update, context: CallbackContext) -> str:
+async def presentation_topic_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    text = f"Whats topic of your {context.user_data[MENU_CHOICE]}?"
-    match context.user_data[MENU_CHOICE]:
-        case "Presentation":
-            context.user_data[COUNT_SLIDE_CHOICE] = data
-        case "Abstract":
-            context.user_data[ABSTRACT_TYPE_CHOICE] = data
+    text = f"Whats topic of your Presentation?"
+    context.user_data[COUNT_SLIDE_CHOICE] = data
     await query.answer()
     await query.edit_message_text(text=text)
     return INPUT_TOPIC
 
 
-async def save_input(update: Update, context: CallbackContext):  # user message
+async def abstract_topic_callback(update: Update, context: CallbackContext) -> str:
+    await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
+    query = update.callback_query
+    data = query.data
+    text = f"Whats topic of your Abstract?"
+    context.user_data[ABSTRACT_TYPE_CHOICE] = data
+    await query.answer()
+    await query.edit_message_text(text=text)
+    return INPUT_TOPIC
+
+
+async def presentation_save_input(update: Update, context: CallbackContext):
     if update.edited_message is not None:
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
@@ -283,95 +298,107 @@ async def save_input(update: Update, context: CallbackContext):  # user message
     user_id = update.message.from_user.id
     message_id = update.message.message_id
     user_mode = db.get_user_attribute(user_id, "current_chat_mode")
-    menu_choice = user_data[MENU_CHOICE]
-    match menu_choice:
-        case "Presentation":
-            language_choice = user_data[PRESENTATION_LANGUAGE_CHOICE].replace("language_", "")
-            template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
-            type_choice = user_data[PRESENTATION_TYPE_CHOICE].replace("type_", "")
-            count_slide_choice = user_data[COUNT_SLIDE_CHOICE].replace("slide_count_", "")
-            topic_choice = user_data[TOPIC_CHOICE]
-            prompt = await presentation.generate_ppt_prompt(language_choice, type_choice, count_slide_choice,
-                                                            topic_choice)
-            if user_mode == "auto":
-                available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
-                if available_tokens > 0:
-                    used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-                    try:
-                        response, n_used_tokens = await openai_utils.process_prompt(prompt)
-                    except OverflowError:
-                        await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
-                                                        reply_to_message_id=message_id)
-                        return END
-                    except RuntimeError:
-                        await update.message.reply_text(text="Some error happened. Please try again. 😊",
-                                                        reply_to_message_id=message_id)
-                        return END
-                    db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
-                    db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
-                    pptx_bytes, pptx_title = await presentation.generate_ppt(response, template_choice)
-                    await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
-                else:
-                    await update.message.reply_text("You have not enough tokens.")
-            else:
-                await update.message.reply_text(text=prompt)
-                return INPUT_PROMPT
-
-        case "Abstract":
-            language_choice = user_data[ABSTRACT_LANGUAGE_CHOICE].replace("language_", "")
-            type_choice = user_data[ABSTRACT_TYPE_CHOICE].replace("type_", "")
-            topic_choice = user_data[TOPIC_CHOICE]
-            prompt = await abstract.generate_docx_prompt(language_choice, type_choice, topic_choice)
-            if user_mode == "auto":
-                available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
-                if available_tokens > 0:
-                    used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-                    try:
-                        response, n_used_tokens = await openai_utils.process_prompt(prompt)
-                    except OverflowError:
-                        await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
-                                                        reply_to_message_id=message_id)
-                        return END
-                    except RuntimeError:
-                        await update.message.reply_text(text="Some error happened. Please try again. 😊",
-                                                        reply_to_message_id=message_id)
-                        return END
-                    db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
-                    db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
-                    docx_bytes, docx_title = await abstract.generate_docx(response)
-                    await update.message.reply_document(document=docx_bytes, filename=docx_title)
-                else:
-                    await update.message.reply_text("You have not enough tokens.")
-            else:
-                await update.message.reply_text(text=prompt)
-                return INPUT_PROMPT
+    language_choice = user_data[PRESENTATION_LANGUAGE_CHOICE].replace("language_", "")
+    template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
+    type_choice = user_data[PRESENTATION_TYPE_CHOICE].replace("type_", "")
+    count_slide_choice = user_data[COUNT_SLIDE_CHOICE].replace("slide_count_", "")
+    topic_choice = user_data[TOPIC_CHOICE]
+    prompt = await presentation.generate_ppt_prompt(language_choice, type_choice, count_slide_choice, topic_choice)
+    if user_mode == "auto":
+        available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
+        if available_tokens > 0:
+            used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+            try:
+                response, n_used_tokens = await openai_utils.process_prompt(prompt)
+            except OverflowError:
+                await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
+                                                reply_to_message_id=message_id)
+                return END
+            except RuntimeError:
+                await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                                                reply_to_message_id=message_id)
+                return END
+            db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
+            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
+            pptx_bytes, pptx_title = await presentation.generate_ppt(response, template_choice)
+            await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+        else:
+            await update.message.reply_text("You have not enough tokens.")
+    else:
+        await update.message.reply_text(text=prompt)
+        return INPUT_PROMPT
     return END
 
 
-async def prompt_callback(update: Update, context: CallbackContext):
+async def abstract_save_input(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        return
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_data = context.user_data
+    user_data[TOPIC_CHOICE] = update.message.text
+    user_id = update.message.from_user.id
+    message_id = update.message.message_id
+    user_mode = db.get_user_attribute(user_id, "current_chat_mode")
+    language_choice = user_data[ABSTRACT_LANGUAGE_CHOICE].replace("language_", "")
+    type_choice = user_data[ABSTRACT_TYPE_CHOICE].replace("type_", "")
+    topic_choice = user_data[TOPIC_CHOICE]
+    prompt = await abstract.generate_docx_prompt(language_choice, type_choice, topic_choice)
+    if user_mode == "auto":
+        available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
+        if available_tokens > 0:
+            used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+            try:
+                response, n_used_tokens = await openai_utils.process_prompt(prompt)
+            except OverflowError:
+                await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
+                                                reply_to_message_id=message_id)
+                return END
+            except RuntimeError:
+                await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                                                reply_to_message_id=message_id)
+                return END
+            db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
+            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
+            docx_bytes, docx_title = await abstract.generate_docx(response)
+            await update.message.reply_document(document=docx_bytes, filename=docx_title)
+        else:
+            await update.message.reply_text("You have not enough tokens.")
+    else:
+        await update.message.reply_text(text=prompt)
+        return INPUT_PROMPT
+    return END
+
+
+async def presentation_prompt_callback(update: Update, context: CallbackContext):
     if update.edited_message is not None:
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_data = context.user_data
     user_data[API_RESPONSE] = update.message.text
-    menu_choice = user_data[MENU_CHOICE]
     api_response = user_data[API_RESPONSE]
-    match menu_choice:
-        case "Presentation":
-            template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
-            try:
-                pptx_bytes, pptx_title = await presentation.generate_ppt(api_response, template_choice)
-                await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
-            except IndexError:
-                await update.message.reply_text("Check inserted data and try again!")
-                return INPUT_PROMPT
-        case "Abstract":
-            try:
-                docx_bytes, docx_title = await abstract.generate_docx(api_response)
-                await update.message.reply_document(document=docx_bytes, filename=docx_title)
-            except IndexError:
-                await update.message.reply_text("Check inserted data and try again!")
-                return INPUT_PROMPT
+    template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
+    try:
+        pptx_bytes, pptx_title = await presentation.generate_ppt(api_response, template_choice)
+        await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+    except IndexError:
+        await update.message.reply_text("Check inserted data and try again!")
+        return INPUT_PROMPT
+    return END
+
+
+async def abstract_prompt_callback(update: Update, context: CallbackContext):
+    if update.edited_message is not None:
+        return
+    await register_user_if_not_exists(update, context, update.message.from_user)
+    user_data = context.user_data
+    user_data[API_RESPONSE] = update.message.text
+    api_response = user_data[API_RESPONSE]
+    try:
+        docx_bytes, docx_title = await abstract.generate_docx(api_response)
+        await update.message.reply_document(document=docx_bytes, filename=docx_title)
+    except IndexError:
+        await update.message.reply_text("Check inserted data and try again!")
+        return INPUT_PROMPT
     return END
 
 
@@ -469,7 +496,7 @@ async def edited_message_handle(update: Update, context: CallbackContext):
 
 async def error_handle(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
-
+    # send error to the chat for test
     try:
         # collect error message
         tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
@@ -489,7 +516,7 @@ async def error_handle(update: object, context: ContextTypes.DEFAULT_TYPE) -> No
             except telegram.error.BadRequest:
                 # answer has invalid characters, so we send it without parse_mode
                 await context.bot.send_message(update.effective_chat.id, message_chunk)
-    except:
+    except Exception:
         await context.bot.send_message(update.effective_chat.id, "Some error in error handler")
 
 
@@ -519,12 +546,12 @@ def run_bot() -> None:
     presentation_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(language_callback, pattern=f"^{PRESENTATION}$")],
         states={
-            SELECTING_LANGUAGE: [CallbackQueryHandler(template_callback, pattern="^language_")],
-            SELECTING_TEMPLATE: [CallbackQueryHandler(type_callback, pattern="^template_")],
-            SELECTING_TYPE: [CallbackQueryHandler(slide_count_callback, pattern="^type_")],
-            SELECTING_SLIDE_COUNT: [CallbackQueryHandler(topic_callback, pattern="^slide_count_")],
-            INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_input)],
-            INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, prompt_callback)],
+            SELECTING_LANGUAGE: [CallbackQueryHandler(presentation_template_callback, pattern="^language_")],
+            SELECTING_TEMPLATE: [CallbackQueryHandler(presentation_type_callback, pattern="^template_")],
+            SELECTING_TYPE: [CallbackQueryHandler(presentation_slide_count_callback, pattern="^type_")],
+            SELECTING_SLIDE_COUNT: [CallbackQueryHandler(presentation_topic_callback, pattern="^slide_count_")],
+            INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, presentation_save_input)],
+            INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, presentation_prompt_callback)],
         },
         fallbacks=[
             CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$"),
@@ -539,10 +566,10 @@ def run_bot() -> None:
     abstract_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(language_callback, pattern=f"^{ABSTRACT}$")],
         states={
-            SELECTING_LANGUAGE: [CallbackQueryHandler(type_callback, pattern="^language_")],
-            SELECTING_TYPE: [CallbackQueryHandler(topic_callback, pattern="^type_")],
-            INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, save_input)],
-            INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, prompt_callback)],
+            SELECTING_LANGUAGE: [CallbackQueryHandler(abstract_type_callback, pattern="^language_")],
+            SELECTING_TYPE: [CallbackQueryHandler(abstract_topic_callback, pattern="^type_")],
+            INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, abstract_save_input)],
+            INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, abstract_prompt_callback)],
         },
         fallbacks=[
             CallbackQueryHandler(end_second_level, pattern=f"^{str(END)}$"),
@@ -578,7 +605,6 @@ def run_bot() -> None:
 
     application.add_error_handler(error_handle)
 
-    # start the bot
     application.run_polling()
 
 
