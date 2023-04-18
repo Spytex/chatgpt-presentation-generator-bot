@@ -291,6 +291,29 @@ async def abstract_topic_callback(update: Update, context: CallbackContext) -> s
     return INPUT_TOPIC
 
 
+async def generate_presentation(update: Update, context: CallbackContext, user_id, message_id, prompt, template_choice):
+    notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
+    try:
+        response, n_used_tokens = await openai_utils.process_prompt(prompt)
+    except OverflowError:
+        await notification_message.delete()
+        await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
+                                        reply_to_message_id=message_id)
+        return END
+    except RuntimeError:
+        await notification_message.delete()
+        await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                                        reply_to_message_id=message_id)
+        return END
+    available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
+    db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
+    used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+    db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
+    pptx_bytes, pptx_title = await presentation.generate_ppt(response, template_choice)
+    await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+    await notification_message.delete()
+
+
 async def presentation_save_input(update: Update, context: CallbackContext):
     if update.edited_message is not None:
         return
@@ -309,25 +332,8 @@ async def presentation_save_input(update: Update, context: CallbackContext):
     if user_mode == "auto":
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
         if available_tokens > 0:
-            used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-            notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
-            try:
-                response, n_used_tokens = await openai_utils.process_prompt(prompt)
-            except OverflowError:
-                await notification_message.delete()
-                await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
-                                                reply_to_message_id=message_id)
-                return END
-            except RuntimeError:
-                await notification_message.delete()
-                await update.message.reply_text(text="Some error happened. Please try again. 😊",
-                                                reply_to_message_id=message_id)
-                return END
-            db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
-            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
-            pptx_bytes, pptx_title = await presentation.generate_ppt(response, template_choice)
-            await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
-            await notification_message.delete()
+            loop = asyncio.get_event_loop()
+            loop.create_task(generate_presentation(update, context, user_id, message_id, prompt, template_choice))
         else:
             await update.message.reply_text("You have not enough tokens.")
     else:
@@ -347,6 +353,29 @@ async def presentation_save_input(update: Update, context: CallbackContext):
     return END
 
 
+async def generate_abstract(update: Update, context: CallbackContext, user_id, message_id, prompt):
+    notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
+    try:
+        response, n_used_tokens = await openai_utils.process_prompt(prompt)
+    except OverflowError:
+        await notification_message.delete()
+        await update.message.reply_text(text="System is currently overloaded. Please try again😊",
+                                        reply_to_message_id=message_id)
+        return END
+    except RuntimeError:
+        await notification_message.delete()
+        await update.message.reply_text(text="Some error happened. Please try again😊",
+                                        reply_to_message_id=message_id)
+        return END
+    available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
+    db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
+    used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+    db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
+    docx_bytes, docx_title = await abstract.generate_docx(response)
+    await update.message.reply_document(document=docx_bytes, filename=docx_title)
+    await notification_message.delete()
+
+
 async def abstract_save_input(update: Update, context: CallbackContext):
     if update.edited_message is not None:
         return
@@ -363,25 +392,8 @@ async def abstract_save_input(update: Update, context: CallbackContext):
     if user_mode == "auto":
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
         if available_tokens > 0:
-            used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
-            notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
-            try:
-                response, n_used_tokens = await openai_utils.process_prompt(prompt)
-            except OverflowError:
-                await notification_message.delete()
-                await update.message.reply_text(text="System is currently overloaded. Please try again😊",
-                                                reply_to_message_id=message_id)
-                return END
-            except RuntimeError:
-                await notification_message.delete()
-                await update.message.reply_text(text="Some error happened. Please try again😊",
-                                                reply_to_message_id=message_id)
-                return END
-            db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
-            db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
-            docx_bytes, docx_title = await abstract.generate_docx(response)
-            await update.message.reply_document(document=docx_bytes, filename=docx_title)
-            await notification_message.delete()
+            loop = asyncio.get_event_loop()
+            loop.create_task(generate_abstract(update, context, user_id, message_id, prompt))
         else:
             await update.message.reply_text("You have not enough tokens😊")
     else:
