@@ -1,10 +1,9 @@
-from typing import Optional, Any
-
-import pymongo
-import uuid
 from datetime import datetime
+from typing import Any
 
 import config
+
+import pymongo
 
 
 class Database:
@@ -23,7 +22,7 @@ class Database:
                 raise ValueError(f"User {user_id} does not exist")
             else:
                 return False
-        
+
     def add_new_user(
         self,
         user_id: int,
@@ -64,4 +63,3 @@ class Database:
     def set_user_attribute(self, user_id: int, key: str, value: Any):
         self.check_if_user_exists(user_id, raise_exception=True)
         self.user_collection.update_one({"_id": user_id}, {"$set": {key: value}})
-

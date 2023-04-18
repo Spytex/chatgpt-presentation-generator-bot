@@ -1,5 +1,5 @@
-import re
 import io
+import re
 
 from docx import Document
 from docx.shared import Inches
@@ -11,9 +11,9 @@ except ImportError:
 
 
 async def generate_docx_prompt(language, emotion_type, topic):
-    message = f"""Create an {language} language very long outline for a {emotion_type} research paper on the topic of 
+    message = f"""Create an {language} language very long outline for a {emotion_type} research paper on the topic of
     {topic} which is long as much as possible. {language} language.
-    
+
         Put this tag before the Title: [TITLE]
         Put this tag after the Title: [/TITLE]
         Put this tag before the Subtitle: [SUBTITLE]
@@ -24,17 +24,17 @@ async def generate_docx_prompt(language, emotion_type, topic):
         Put this tag after the Content: [/CONTENT]
         Put this tag before the Image: [IMAGE]
         Put this tag after the Image: [/IMAGE]
-        
+
         Elaborate on the Content, provide as much information as possible.
         You put a [/CONTENT] at the end of the Content.
-        
+
         For example:
         [TITLE]Mental Health[/TITLE]
         [SUBTITLE]Understanding and Nurturing Your Mind: A Guide to Mental Health[/SUBTITLE]
         [HEADING]Mental Health Definition[/HEADING]
         [CONTENT]...[/CONTENT]
         [IMAGE]Mental Health[/IMAGE]
-        
+
         Pay attention to the language of research paper - {language}.
         Do not reply as if you are talking about the research paper itself. (ex. "Include pictures here about...")
         Do not write something like: "Include image here" in the Image, specify each image.

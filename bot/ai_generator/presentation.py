@@ -1,6 +1,7 @@
+import io
 import os
 import re
-import io
+
 
 from pptx import Presentation
 

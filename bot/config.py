@@ -1,6 +1,9 @@
-import yaml
-import dotenv
 from pathlib import Path
+
+import dotenv
+
+import yaml
+
 
 config_dir = Path(__file__).parent.parent.resolve() / "config"
 

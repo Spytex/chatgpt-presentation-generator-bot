@@ -1,37 +1,41 @@
-import logging
-import traceback
+import asyncio
 import html
 import json
-import asyncio
+import logging
+import traceback
 from datetime import datetime
+
+import ai_generator.abstract as abstract
+import ai_generator.openai_utils as openai_utils
+import ai_generator.presentation as presentation
+
+import config
+
+import database
 
 import telegram
 from telegram import (
-    Update,
-    User,
+    BotCommand,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    BotCommand,
     LabeledPrice,
+    Update,
+    User,
 )
+from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
     ApplicationBuilder,
     CallbackContext,
-    PreCheckoutQueryHandler,
-    CommandHandler,
-    MessageHandler,
     CallbackQueryHandler,
-    filters,
+    CommandHandler,
     ContextTypes,
     ConversationHandler,
+    MessageHandler,
+    PreCheckoutQueryHandler,
+    filters,
 )
-from telegram.constants import ParseMode
-import config
-import database
-import ai_generator.presentation as presentation
-import ai_generator.abstract as abstract
-import ai_generator.openai_utils as openai_utils
+
 
 # setup
 db = database.Database()
@@ -231,7 +235,7 @@ async def presentation_type_callback(update: Update, context: CallbackContext) -
     query = update.callback_query
     data = query.data
     context.user_data[TEMPLATE_CHOICE] = data
-    text = f"Choose type of your Presentation:"
+    text = "Choose type of your Presentation:"
     reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
@@ -243,7 +247,7 @@ async def abstract_type_callback(update: Update, context: CallbackContext) -> st
     query = update.callback_query
     data = query.data
     context.user_data[ABSTRACT_LANGUAGE_CHOICE] = data
-    text = f"Choose type of your Abstract:"
+    text = "Choose type of your Abstract:"
     reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
@@ -255,7 +259,7 @@ async def presentation_slide_count_callback(update: Update, context: CallbackCon
     query = update.callback_query
     data = query.data
     context.user_data[PRESENTATION_TYPE_CHOICE] = data
-    text = f"Choose the number of slides for your Presentation:"
+    text = "Choose the number of slides for your Presentation:"
     keyboard = []
     for i, counts in enumerate(COUNTS):
         if i % 3 == 0:
@@ -273,7 +277,7 @@ async def presentation_topic_callback(update: Update, context: CallbackContext) 
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    text = f"Whats topic of your Presentation?"
+    text = "Whats topic of your Presentation?"
     context.user_data[COUNT_SLIDE_CHOICE] = data
     await query.answer()
     await query.edit_message_text(text=text)
@@ -284,14 +288,14 @@ async def abstract_topic_callback(update: Update, context: CallbackContext) -> s
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    text = f"Whats topic of your Abstract?"
+    text = "Whats topic of your Abstract?"
     context.user_data[ABSTRACT_TYPE_CHOICE] = data
     await query.answer()
     await query.edit_message_text(text=text)
     return INPUT_TOPIC
 
 
-async def generate_presentation(update: Update, context: CallbackContext, user_id, message_id, prompt, template_choice):
+async def auto_generate_presentation(update: Update, context: CallbackContext, user_id, message_id, prompt, template_choice):
     notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
     try:
         response, n_used_tokens = await openai_utils.process_prompt(prompt)
@@ -333,7 +337,7 @@ async def presentation_save_input(update: Update, context: CallbackContext):
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
         if available_tokens > 0:
             loop = asyncio.get_event_loop()
-            loop.create_task(generate_presentation(update, context, user_id, message_id, prompt, template_choice))
+            loop.create_task(auto_generate_presentation(update, context, user_id, message_id, prompt, template_choice))
         else:
             await update.message.reply_text("You have not enough tokens.")
     else:
@@ -353,7 +357,7 @@ async def presentation_save_input(update: Update, context: CallbackContext):
     return END
 
 
-async def generate_abstract(update: Update, context: CallbackContext, user_id, message_id, prompt):
+async def auto_generate_abstract(update: Update, context: CallbackContext, user_id, message_id, prompt):
     notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
     try:
         response, n_used_tokens = await openai_utils.process_prompt(prompt)
@@ -393,7 +397,7 @@ async def abstract_save_input(update: Update, context: CallbackContext):
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
         if available_tokens > 0:
             loop = asyncio.get_event_loop()
-            loop.create_task(generate_abstract(update, context, user_id, message_id, prompt))
+            loop.create_task(auto_generate_abstract(update, context, user_id, message_id, prompt))
         else:
             await update.message.reply_text("You have not enough tokens😊")
     else:
@@ -450,7 +454,6 @@ async def end_second_level(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     """Return to top level conversation."""
     context.user_data[START_OVER] = True
     await menu_handle(update, context)
-
     return END
 
 

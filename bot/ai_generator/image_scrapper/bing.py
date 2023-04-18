@@ -1,9 +1,9 @@
-import asyncio
+import imghdr
 import logging
 import re
 import urllib.parse
+
 from aiohttp import ClientSession
-import imghdr
 
 
 class Bing:
