@@ -487,7 +487,7 @@ async def show_balance_handle(update: Update, context: CallbackContext):
 async def buy_tokens_callback(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
-    user_id = query.from_user.id
+    chat_id = query.message.chat_id
 
     await query.answer()
     # Calculate the price based on the token amount
@@ -504,11 +504,11 @@ async def buy_tokens_callback(update: Update, context: CallbackContext):
     # Create an invoice
     title = f"{token_amount} tokens"
     description = f"Purchase of {token_amount} tokens for the chat bot"
-    payload = f"{user_id}-{token_amount}"  # Custom payload to identify the user and token amount
+    payload = f"{token_amount}"  # Custom payload to identify the user and token amount
     currency = "USD"
     prices = [LabeledPrice("Purchase", int(float(price) * 100))]
     # Send the invoice to the user
-    await context.bot.send_invoice(chat_id=user_id,
+    await context.bot.send_invoice(chat_id=chat_id,
                                    title=title,
                                    description=description,
                                    start_parameter=payload,
@@ -527,13 +527,15 @@ async def pre_checkout_callback(update: Update, context: CallbackContext):
 async def successful_payment_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, context, update.message.from_user)
     payment = update.message.successful_payment
-    payment_info = payment.invoice_payload.split('-')
-    payment_chat_id = int(payment_info[0])
-    payment_tokens = int(payment_info[1])
-    n_available_tokens = db.get_user_attribute(payment_chat_id, "n_available_tokens")
-    db.set_user_attribute(payment_chat_id, "n_available_tokens", n_available_tokens + payment_tokens)
-    db.set_user_attribute(payment_chat_id, "last_invoice_payload", payment.invoice_payload)
-    await update.message.reply_text("Thank you for your payment!")
+    payment_user_id = update.message.from_user.id
+    payment_tokens = int(payment.invoice_payload)
+    n_available_tokens = db.get_user_attribute(payment_user_id, "n_available_tokens")
+    db.set_user_attribute(payment_user_id, "n_available_tokens", n_available_tokens + payment_tokens)
+    db.set_user_attribute(payment_user_id, "last_invoice_payload", payment.invoice_payload)
+    try:
+        await update.message.reply_text("😊Thank you for your payment!")
+    except telegram.error.Forbidden:
+        pass
 
 
 async def edited_message_handle(update: Update, context: CallbackContext):
