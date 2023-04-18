@@ -2,6 +2,7 @@ import logging
 import traceback
 import html
 import json
+import asyncio
 from datetime import datetime
 
 import telegram
@@ -124,7 +125,8 @@ async def set_chat_mode_handle(update: Update, context: CallbackContext):
     await query.answer()
     chat_mode = query.data.split("|")[1]
     db.set_user_attribute(user_id, "current_chat_mode", chat_mode)
-    await query.edit_message_text(f"{CHAT_MODES[chat_mode]['welcome_message']}", parse_mode=ParseMode.HTML)
+    await query.edit_message_text(f"{CHAT_MODES[chat_mode]['welcome_message']}\n\n" + HELP_MESSAGE,
+                                  parse_mode=ParseMode.HTML)
 
 
 SELECTING_ACTION, SELECTING_LANGUAGE, SELECTING_TEMPLATE, SELECTING_TYPE, SELECTING_SLIDE_COUNT, INPUT_TOPIC, \
@@ -308,13 +310,16 @@ async def presentation_save_input(update: Update, context: CallbackContext):
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
         if available_tokens > 0:
             used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+            notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
             try:
                 response, n_used_tokens = await openai_utils.process_prompt(prompt)
             except OverflowError:
+                await notification_message.delete()
                 await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
                                                 reply_to_message_id=message_id)
                 return END
             except RuntimeError:
+                await notification_message.delete()
                 await update.message.reply_text(text="Some error happened. Please try again. 😊",
                                                 reply_to_message_id=message_id)
                 return END
@@ -322,10 +327,22 @@ async def presentation_save_input(update: Update, context: CallbackContext):
             db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
             pptx_bytes, pptx_title = await presentation.generate_ppt(response, template_choice)
             await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
+            await notification_message.delete()
         else:
             await update.message.reply_text("You have not enough tokens.")
     else:
-        await update.message.reply_text(text=prompt)
+        try:
+            await update.message.reply_text(text="`" + prompt + "`", parse_mode=ParseMode.MARKDOWN_V2)
+        except telegram.error.BadRequest:
+            await update.message.reply_text("Check inserted data and input topic again😊")
+            return INPUT_TOPIC
+        await update.message.reply_text(text="1) Copy previous message with prompt and process it😊"
+                                             "\n2) Copy the response of the processed prompt and paste it to the chat😊"
+                                             "\n\nRecommended websites:",
+                                        reply_markup=InlineKeyboardMarkup([
+                                            [InlineKeyboardButton(text='Poe', url='https://poe.com/ChatGPT')],
+                                            [InlineKeyboardButton(text='Chat OpenAI', url='https://chat.openai.com/')],
+                                        ]))
         return INPUT_PROMPT
     return END
 
@@ -347,24 +364,39 @@ async def abstract_save_input(update: Update, context: CallbackContext):
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
         if available_tokens > 0:
             used_tokens = db.get_user_attribute(user_id, "n_used_tokens")
+            notification_message = await update.message.reply_text("⌛", reply_to_message_id=message_id)
             try:
                 response, n_used_tokens = await openai_utils.process_prompt(prompt)
             except OverflowError:
-                await update.message.reply_text(text="System is currently overloaded. Please try again. 😊",
+                await notification_message.delete()
+                await update.message.reply_text(text="System is currently overloaded. Please try again😊",
                                                 reply_to_message_id=message_id)
                 return END
             except RuntimeError:
-                await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                await notification_message.delete()
+                await update.message.reply_text(text="Some error happened. Please try again😊",
                                                 reply_to_message_id=message_id)
                 return END
             db.set_user_attribute(user_id, "n_available_tokens", available_tokens - n_used_tokens)
             db.set_user_attribute(user_id, "n_used_tokens", n_used_tokens + used_tokens)
             docx_bytes, docx_title = await abstract.generate_docx(response)
             await update.message.reply_document(document=docx_bytes, filename=docx_title)
+            await notification_message.delete()
         else:
-            await update.message.reply_text("You have not enough tokens.")
+            await update.message.reply_text("You have not enough tokens😊")
     else:
-        await update.message.reply_text(text=prompt)
+        try:
+            await update.message.reply_text(text="`" + prompt + "`", parse_mode=ParseMode.MARKDOWN_V2)
+        except telegram.error.BadRequest:
+            await update.message.reply_text("Check inserted data and input topic again😊")
+            return INPUT_TOPIC
+        await update.message.reply_text(text="1) Copy previous message with prompt and process it😊"
+                                             "\n2) Copy the response of the processed prompt and paste it to the chat😊"
+                                             "\n\nRecommended websites:",
+                                        reply_markup=InlineKeyboardMarkup([
+                                            [InlineKeyboardButton(text='Poe', url='https://poe.com/ChatGPT')],
+                                            [InlineKeyboardButton(text='Chat OpenAI', url='https://chat.openai.com/')],
+                                        ]))
         return INPUT_PROMPT
     return END
 
@@ -381,7 +413,7 @@ async def presentation_prompt_callback(update: Update, context: CallbackContext)
         pptx_bytes, pptx_title = await presentation.generate_ppt(api_response, template_choice)
         await update.message.reply_document(document=pptx_bytes, filename=pptx_title)
     except IndexError:
-        await update.message.reply_text("Check inserted data and try again!")
+        await update.message.reply_text("Check inserted data and try again😊")
         return INPUT_PROMPT
     return END
 
@@ -397,7 +429,7 @@ async def abstract_prompt_callback(update: Update, context: CallbackContext):
         docx_bytes, docx_title = await abstract.generate_docx(api_response)
         await update.message.reply_document(document=docx_bytes, filename=docx_title)
     except IndexError:
-        await update.message.reply_text("Check inserted data and try again!")
+        await update.message.reply_text("Check inserted data and try again😊")
         return INPUT_PROMPT
     return END
 
