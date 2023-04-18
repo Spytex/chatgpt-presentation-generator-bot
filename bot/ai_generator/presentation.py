@@ -55,6 +55,7 @@ async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
         Elaborate on the Content, provide as much information as possible.
         You put a [/CONTENT] at the end of the Content.
         Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
+        Do not write something like: "Include image here" in the Image, specify each image.
         Do not include any special characters (?, !, ., :, ) in the Title.
         Do not include any additional information in your response and stick to the format."""
 
