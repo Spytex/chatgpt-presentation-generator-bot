@@ -147,7 +147,6 @@ TYPES = ["Fun", "Serious", "Creative", "Informative", "Inspirational", "Motivati
 TYPES_EMOJI = ["😂", "😐", "🎨", "📚", "🌟", "💪", "👨‍🎓", "🏛️", "💕", "🕵️‍♂️", "🧘‍♀️", "🗺️"]
 COUNTS = [str(i) for i in range(3, 15)]
 BACK = "⬅️Back"
-MENU = "⬅️Menu"
 (
     MENU_CHOICE,
     PRESENTATION_LANGUAGE_CHOICE,
@@ -266,7 +265,7 @@ async def presentation_slide_count_callback(update: Update, context: CallbackCon
             keyboard.append([InlineKeyboardButton(counts, callback_data=f"slide_count_{counts}")])
         else:
             keyboard[-1].append(InlineKeyboardButton(counts, callback_data=f"slide_count_{counts}"))
-    keyboard.append([InlineKeyboardButton(text=MENU, callback_data=str(END))])
+    keyboard.append([InlineKeyboardButton(text=BACK, callback_data=str(END))])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
@@ -307,6 +306,11 @@ async def auto_generate_presentation(update: Update, context: CallbackContext, u
     except RuntimeError:
         await notification_message.delete()
         await update.message.reply_text(text="Some error happened. Please try again. 😊",
+                                        reply_to_message_id=message_id)
+        return END
+    except ValueError:
+        await notification_message.delete()
+        await update.message.reply_text(text="Your Presentation is too big. Please try again😊",
                                         reply_to_message_id=message_id)
         return END
     available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
@@ -369,6 +373,11 @@ async def auto_generate_abstract(update: Update, context: CallbackContext, user_
     except RuntimeError:
         await notification_message.delete()
         await update.message.reply_text(text="Some error happened. Please try again😊",
+                                        reply_to_message_id=message_id)
+        return END
+    except ValueError:
+        await notification_message.delete()
+        await update.message.reply_text(text="Your Abstract is too big. Please try again😊",
                                         reply_to_message_id=message_id)
         return END
     available_tokens = db.get_user_attribute(user_id, "n_available_tokens")

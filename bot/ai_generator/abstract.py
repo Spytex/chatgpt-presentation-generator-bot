@@ -27,6 +27,7 @@ async def generate_docx_prompt(language, emotion_type, topic):
 
         Elaborate on the Content, provide as much information as possible.
         You put a [/CONTENT] at the end of the Content.
+        Do not put a tag before ending previous.
 
         For example:
         [TITLE]Mental Health[/TITLE]
@@ -38,6 +39,7 @@ async def generate_docx_prompt(language, emotion_type, topic):
         Pay attention to the language of research paper - {language}.
         Do not reply as if you are talking about the research paper itself. (ex. "Include pictures here about...")
         Do not write something like: "Include image here" in the Image, specify each image.
+        Do not write URL to the Image.
         Do not include any special characters (?, !, ., :, ) in the Title.
         Do not include any additional information in your response and stick to the format."""
 
