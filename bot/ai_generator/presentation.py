@@ -2,7 +2,6 @@ import io
 import os
 import re
 
-
 from pptx import Presentation
 
 try:

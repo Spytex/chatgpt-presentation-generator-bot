@@ -98,11 +98,6 @@ async def help_handle(update: Update, context: CallbackContext):
 
 
 async def message_handle(update: Update, context: CallbackContext, message=None):
-    # check if message is edited
-    if update.edited_message is not None:
-        await edited_message_handle(update, context)
-        return
-
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_id = update.message.from_user.id
 
@@ -327,15 +322,14 @@ async def presentation_save_input(update: Update, context: CallbackContext):
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_data = context.user_data
-    user_data[TOPIC_CHOICE] = update.message.text
     user_id = update.message.from_user.id
     message_id = update.message.message_id
+    topic_choice = update.message.text
     user_mode = db.get_user_attribute(user_id, "current_chat_mode")
     language_choice = user_data[PRESENTATION_LANGUAGE_CHOICE].replace("language_", "")
     template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
     type_choice = user_data[PRESENTATION_TYPE_CHOICE].replace("type_", "")
     count_slide_choice = user_data[COUNT_SLIDE_CHOICE].replace("slide_count_", "")
-    topic_choice = user_data[TOPIC_CHOICE]
     prompt = await presentation.generate_ppt_prompt(language_choice, type_choice, count_slide_choice, topic_choice)
     if user_mode == "auto":
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
@@ -394,13 +388,12 @@ async def abstract_save_input(update: Update, context: CallbackContext):
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
     user_data = context.user_data
-    user_data[TOPIC_CHOICE] = update.message.text
     user_id = update.message.from_user.id
     message_id = update.message.message_id
+    topic_choice = update.message.text
     user_mode = db.get_user_attribute(user_id, "current_chat_mode")
     language_choice = user_data[ABSTRACT_LANGUAGE_CHOICE].replace("language_", "")
     type_choice = user_data[ABSTRACT_TYPE_CHOICE].replace("type_", "")
-    topic_choice = user_data[TOPIC_CHOICE]
     prompt = await abstract.generate_docx_prompt(language_choice, type_choice, topic_choice)
     if user_mode == "auto":
         available_tokens = db.get_user_attribute(user_id, "n_available_tokens")
@@ -428,11 +421,11 @@ async def abstract_save_input(update: Update, context: CallbackContext):
 
 async def presentation_prompt_callback(update: Update, context: CallbackContext):
     if update.edited_message is not None:
+        await edited_message_handle(update, context)
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
+    api_response = update.message.text
     user_data = context.user_data
-    user_data[API_RESPONSE] = update.message.text
-    api_response = user_data[API_RESPONSE]
     template_choice = user_data[TEMPLATE_CHOICE].replace("template_", "")
     try:
         pptx_bytes, pptx_title = await presentation.generate_ppt(api_response, template_choice)
@@ -445,11 +438,10 @@ async def presentation_prompt_callback(update: Update, context: CallbackContext)
 
 async def abstract_prompt_callback(update: Update, context: CallbackContext):
     if update.edited_message is not None:
+        await edited_message_handle(update, context)
         return
     await register_user_if_not_exists(update, context, update.message.from_user)
-    user_data = context.user_data
-    user_data[API_RESPONSE] = update.message.text
-    api_response = user_data[API_RESPONSE]
+    api_response = update.message.text
     try:
         docx_bytes, docx_title = await abstract.generate_docx(api_response)
         await update.message.reply_document(document=docx_bytes, filename=docx_title)
@@ -596,7 +588,7 @@ def run_bot() -> None:
     application.add_handler(CommandHandler("start", start_handle, filters=user_filter))
     application.add_handler(CommandHandler("help", help_handle, filters=user_filter))
 
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, message_handle))
+    application.add_handler(MessageHandler(filters.COMMAND & user_filter, message_handle), group=2)
 
     application.add_handler(CommandHandler("mode", show_chat_modes_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
