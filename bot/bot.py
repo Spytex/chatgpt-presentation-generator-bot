@@ -609,6 +609,7 @@ def run_bot() -> None:
         ],
         map_to_parent={
             END: SELECTING_ACTION,
+            SELECTING_ACTION: SELECTING_ACTION,
         },
         allow_reentry=True,
     )
@@ -627,6 +628,7 @@ def run_bot() -> None:
         ],
         map_to_parent={
             END: SELECTING_ACTION,
+            SELECTING_ACTION: SELECTING_ACTION,
         },
         allow_reentry=True,
     )
@@ -644,9 +646,8 @@ def run_bot() -> None:
         fallbacks=[
             CommandHandler("menu", menu_handle, filters=user_filter)
         ],
-        allow_reentry=True,
     )
-    application.add_handler(menu_conv_handler, group=1)
+    application.add_handler(menu_conv_handler)
 
     application.add_handler(CommandHandler("balance", show_balance_handle, filters=user_filter))
     application.add_handler(CallbackQueryHandler(buy_tokens_callback, pattern="^buy_tokens_"))
