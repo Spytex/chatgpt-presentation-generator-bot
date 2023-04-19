@@ -275,6 +275,8 @@ async def presentation_topic_callback(update: Update, context: CallbackContext) 
     context.user_data[COUNT_SLIDE_CHOICE] = data
     await query.answer()
     await query.edit_message_text(text=text)
+    if MESSAGE_ID in context.chat_data:
+        del context.chat_data[MESSAGE_ID]
     return INPUT_TOPIC
 
 
@@ -286,6 +288,8 @@ async def abstract_topic_callback(update: Update, context: CallbackContext) -> s
     context.user_data[ABSTRACT_TYPE_CHOICE] = data
     await query.answer()
     await query.edit_message_text(text=text)
+    if MESSAGE_ID in context.chat_data:
+        del context.chat_data[MESSAGE_ID]
     return INPUT_TOPIC
 
 
