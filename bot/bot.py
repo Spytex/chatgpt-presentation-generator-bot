@@ -143,7 +143,6 @@ TYPES_EMOJI = ["😂", "😐", "🎨", "📚", "🌟", "💪", "👨‍🎓", "�
 COUNTS = [str(i) for i in range(3, 15)]
 BACK = "⬅️Back"
 (
-    MENU_CHOICE,
     PRESENTATION_LANGUAGE_CHOICE,
     ABSTRACT_LANGUAGE_CHOICE,
     TEMPLATE_CHOICE,
@@ -154,7 +153,7 @@ BACK = "⬅️Back"
     API_RESPONSE,
     START_OVER,
     MESSAGE_ID,
-) = map(chr, range(10, 21))
+) = map(chr, range(10, 20))
 
 
 async def menu_handle(update: Update, context: CallbackContext) -> str:
@@ -204,7 +203,6 @@ async def language_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[MENU_CHOICE] = data
     text = f"Choose language of your {data}:"
     reply_markup = await generate_keyboard(LANGUAGES, LANGUAGES_EMOJI, "language_")
     await query.answer()
@@ -217,7 +215,7 @@ async def presentation_template_callback(update: Update, context: CallbackContex
     query = update.callback_query
     data = query.data
     context.user_data[PRESENTATION_LANGUAGE_CHOICE] = data
-    text = f"Choose template of your {context.user_data[MENU_CHOICE]}:"
+    text = "Choose template of your Presentation:"
     reply_markup = await generate_keyboard(TEMPLATES, TEMPLATES_EMOJI, "template_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
