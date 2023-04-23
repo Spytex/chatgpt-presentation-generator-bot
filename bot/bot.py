@@ -128,8 +128,7 @@ async def set_chat_mode_handle(update: Update, context: CallbackContext):
                                   parse_mode=ParseMode.HTML)
 
 
-SELECTING_ACTION, SELECTING_LANGUAGE, SELECTING_TEMPLATE, SELECTING_TYPE, SELECTING_SLIDE_COUNT, INPUT_TOPIC, \
-    INPUT_PROMPT = map(chr, range(7))
+SELECTING_ACTION, SELECTING_MENU, INPUT_TOPIC, INPUT_PROMPT = map(chr, range(4))
 END = ConversationHandler.END
 PRESENTATION = "Presentation"
 ABSTRACT = "Abstract"
@@ -140,7 +139,8 @@ TEMPLATES_EMOJI = ["🗻", "🌿", "🐼", "🧭", "🌑", "🕯️", "🎓"]
 TYPES = ["Fun", "Serious", "Creative", "Informative", "Inspirational", "Motivational", "Educational", "Historical",
          "Romantic", "Mysterious", "Relaxing", "Adventurous"]
 TYPES_EMOJI = ["😂", "😐", "🎨", "📚", "🌟", "💪", "👨‍🎓", "🏛️", "💕", "🕵️‍♂️", "🧘‍♀️", "🗺️"]
-COUNTS = [str(i) for i in range(3, 15)]
+COUNTS = [str(i) for i in range(3, 27)]
+COUNTS_EMOJI = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
 BACK = "⬅️Back"
 (
     PRESENTATION_LANGUAGE_CHOICE,
@@ -186,83 +186,120 @@ async def menu_handle(update: Update, context: CallbackContext) -> str:
     return SELECTING_ACTION
 
 
-async def generate_keyboard(word_array, emoji_array, callback):
+async def generate_keyboard(page, word_array, emoji_array, callback):
     keyboard = []
-    for i, words in enumerate(word_array):
+    per_page = 12
+    for i, words in enumerate(word_array[(page-1)*per_page:page*per_page]):
         if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(emoji_array[i] + words,
+            keyboard.append([InlineKeyboardButton(emoji_array[i+((page-1)*per_page)] + words,
                                                   callback_data=f"{callback}{words}")])
         else:
-            keyboard[-1].append(InlineKeyboardButton(emoji_array[i] + words,
+            keyboard[-1].append(InlineKeyboardButton(emoji_array[i+((page-1)*per_page)] + words,
                                                      callback_data=f"{callback}{words}"))
+    if len(word_array) > per_page and page == 1:
+        keyboard.append([InlineKeyboardButton(">>", callback_data=f"page_{callback}{page+1}")])
+    elif page != 1:
+        if len(word_array) > page*per_page:
+            keyboard.append([
+                InlineKeyboardButton("<<", callback_data=f"page_{callback}{page-1}"),
+                InlineKeyboardButton(">>", callback_data=f"page_{callback}{page+1}")
+            ])
+        else:
+            keyboard.append([InlineKeyboardButton("<<", callback_data=f"page_{callback}{page-1}")])
     keyboard.append([InlineKeyboardButton(text=BACK, callback_data=str(END))])
     return InlineKeyboardMarkup(keyboard)
 
 
-async def language_callback(update: Update, context: CallbackContext) -> str:
+async def presentation_language_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    text = f"Choose language of your {data}:"
-    reply_markup = await generate_keyboard(LANGUAGES, LANGUAGES_EMOJI, "language_")
+    page = 1
+    if data.startswith("page_language_"):
+        page = int(data.replace("page_language_", ""))
+    text = "Choose language of your Presentation:"
+    reply_markup = await generate_keyboard(page, LANGUAGES, LANGUAGES_EMOJI, "language_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
-    return SELECTING_LANGUAGE
+    return SELECTING_MENU
+
+
+async def abstract_language_callback(update: Update, context: CallbackContext) -> str:
+    await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
+    query = update.callback_query
+    data = query.data
+    page = 1
+    if data.startswith("page_language_"):
+        page = int(data.replace("page_language_", ""))
+    text = "Choose language of your Abstract:"
+    reply_markup = await generate_keyboard(page, LANGUAGES, LANGUAGES_EMOJI, "language_")
+    await query.answer()
+    await query.edit_message_text(text=text, reply_markup=reply_markup)
+    return SELECTING_MENU
 
 
 async def presentation_template_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[PRESENTATION_LANGUAGE_CHOICE] = data
+    page = 1
+    if data.startswith("page_template_"):
+        page = int(data.replace("page_template_", ""))
+    else:
+        context.user_data[PRESENTATION_LANGUAGE_CHOICE] = data
     text = "Choose template of your Presentation:"
-    reply_markup = await generate_keyboard(TEMPLATES, TEMPLATES_EMOJI, "template_")
+    reply_markup = await generate_keyboard(page, TEMPLATES, TEMPLATES_EMOJI, "template_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
-    return SELECTING_TEMPLATE
+    return SELECTING_MENU
 
 
 async def presentation_type_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[TEMPLATE_CHOICE] = data
+    page = 1
+    if data.startswith("page_type_"):
+        page = int(data.replace("page_type_", ""))
+    else:
+        context.user_data[TEMPLATE_CHOICE] = data
     text = "Choose type of your Presentation:"
-    reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
+    reply_markup = await generate_keyboard(page, TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
-    return SELECTING_TYPE
+    return SELECTING_MENU
 
 
 async def abstract_type_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[ABSTRACT_LANGUAGE_CHOICE] = data
+    page = 1
+    if data.startswith("page_type_"):
+        page = int(data.replace("page_type_", ""))
+    else:
+        context.user_data[ABSTRACT_LANGUAGE_CHOICE] = data
     text = "Choose type of your Abstract:"
-    reply_markup = await generate_keyboard(TYPES, TYPES_EMOJI, "type_")
+    reply_markup = await generate_keyboard(page, TYPES, TYPES_EMOJI, "type_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
-    return SELECTING_TYPE
+    return SELECTING_MENU
 
 
 async def presentation_slide_count_callback(update: Update, context: CallbackContext) -> str:
     await register_user_if_not_exists(update.callback_query, context, update.callback_query.from_user)
     query = update.callback_query
     data = query.data
-    context.user_data[PRESENTATION_TYPE_CHOICE] = data
+    page = 1
+    if data.startswith("page_slide_count_"):
+        page = int(data.replace("page_slide_count_", ""))
+    else:
+        context.user_data[PRESENTATION_TYPE_CHOICE] = data
     text = "Choose the number of slides for your Presentation:"
-    keyboard = []
-    for i, counts in enumerate(COUNTS):
-        if i % 3 == 0:
-            keyboard.append([InlineKeyboardButton(counts, callback_data=f"slide_count_{counts}")])
-        else:
-            keyboard[-1].append(InlineKeyboardButton(counts, callback_data=f"slide_count_{counts}"))
-    keyboard.append([InlineKeyboardButton(text=BACK, callback_data=str(END))])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = await generate_keyboard(page, COUNTS, COUNTS_EMOJI, "slide_count_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)
-    return SELECTING_SLIDE_COUNT
+    return SELECTING_MENU
 
 
 async def presentation_topic_callback(update: Update, context: CallbackContext) -> str:
@@ -596,12 +633,18 @@ def run_bot() -> None:
     application.add_handler(CallbackQueryHandler(set_chat_mode_handle, pattern="^set_chat_mode"))
 
     presentation_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(language_callback, pattern=f"^{PRESENTATION}$")],
+        entry_points=[CallbackQueryHandler(presentation_language_callback, pattern=f"^{PRESENTATION}$")],
         states={
-            SELECTING_LANGUAGE: [CallbackQueryHandler(presentation_template_callback, pattern="^language_")],
-            SELECTING_TEMPLATE: [CallbackQueryHandler(presentation_type_callback, pattern="^template_")],
-            SELECTING_TYPE: [CallbackQueryHandler(presentation_slide_count_callback, pattern="^type_")],
-            SELECTING_SLIDE_COUNT: [CallbackQueryHandler(presentation_topic_callback, pattern="^slide_count_")],
+            SELECTING_MENU: [
+                CallbackQueryHandler(presentation_language_callback, pattern="^page_language_"),
+                CallbackQueryHandler(presentation_template_callback, pattern="^language_"),
+                CallbackQueryHandler(presentation_template_callback, pattern="^page_template_"),
+                CallbackQueryHandler(presentation_type_callback, pattern="^template_"),
+                CallbackQueryHandler(presentation_type_callback, pattern="^page_type_"),
+                CallbackQueryHandler(presentation_slide_count_callback, pattern="^type_"),
+                CallbackQueryHandler(presentation_slide_count_callback, pattern="^page_slide_count_"),
+                CallbackQueryHandler(presentation_topic_callback, pattern="^slide_count_"),
+                             ],
             INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, presentation_save_input)],
             INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, presentation_prompt_callback)],
         },
@@ -617,10 +660,14 @@ def run_bot() -> None:
     )
 
     abstract_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(language_callback, pattern=f"^{ABSTRACT}$")],
+        entry_points=[CallbackQueryHandler(abstract_language_callback, pattern=f"^{ABSTRACT}$")],
         states={
-            SELECTING_LANGUAGE: [CallbackQueryHandler(abstract_type_callback, pattern="^language_")],
-            SELECTING_TYPE: [CallbackQueryHandler(abstract_topic_callback, pattern="^type_")],
+            SELECTING_MENU: [
+                CallbackQueryHandler(abstract_language_callback, pattern="^page_language_"),
+                CallbackQueryHandler(abstract_type_callback, pattern="^language_"),
+                CallbackQueryHandler(abstract_type_callback, pattern="^page_type_"),
+                CallbackQueryHandler(abstract_topic_callback, pattern="^type_")
+                             ],
             INPUT_TOPIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, abstract_save_input)],
             INPUT_PROMPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, abstract_prompt_callback)],
         },
