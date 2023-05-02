@@ -132,13 +132,23 @@ SELECTING_ACTION, SELECTING_MENU, INPUT_TOPIC, INPUT_PROMPT = map(chr, range(4))
 END = ConversationHandler.END
 PRESENTATION = "Presentation"
 ABSTRACT = "Abstract"
-LANGUAGES = ["English", "Ukrainian", "Polish", "Russian", "Spanish", "French", "German", "Italian", "Portuguese"]
-LANGUAGES_EMOJI = ["🇬🇧", "🇺🇦", "🇵🇱", "🏳️", "🇪🇸", "🇫🇷", "🇩🇪", "🇮🇹", "🇵🇹"]
-TEMPLATES = ["Mountains", "Organic", "East Asia", "Explore", "3D Float", "Luminous", "Academic"]
-TEMPLATES_EMOJI = ["🗻", "🌿", "🐼", "🧭", "🌑", "🕯️", "🎓"]
+LANGUAGES = ['English', 'Russian', 'German', 'French', 'Italian', 'Spanish', 'Ukrainian', 'Polish', 'Turkish',
+             'Romanian', 'Dutch', 'Greek', 'Czech', 'Portuguese', 'Swedish', 'Hungarian', 'Serbian', 'Bulgarian',
+             'Danish', 'Norwegian', 'Finnish', 'Slovak', 'Croatian', 'Arabic', 'Hebrew', 'Lithuanian', 'Slovenian',
+             'Bengali', 'Chinese', 'Persian', 'Indonesian', 'Latvian', 'Tamil', 'Japanese', 'Estonian', 'Telugu',
+             'Korean', 'Thai', 'Icelandic', 'Vietnamese']
+LANGUAGES_EMOJI = ['🇬🇧', '🏳️', '🇩🇪', '🇫🇷', '🇮🇹', '🇪🇸', '🇺🇦', '🇵🇱', '🇹🇷', '🇷🇴', '🇳🇱', '🇬🇷',
+                   '🇨🇿', '🇵🇹', '🇸🇪', '🇭🇺', '🇷🇸', '🇧🇬', '🇩🇰', '🇳🇴', '🇫🇮', '🇸🇰', '🇭🇷', '🇸🇦',
+                   '🇮🇱', '🇱🇹', '🇸🇮', '🇧🇩', '🇨🇳', '🇮🇷', '🇮🇩', '🇱🇻', '🇮🇳', '🇯🇵', '🇪🇪', '🇮🇳',
+                   '🇰🇷', '🇹🇭', '🇮🇸', '🇻🇳']
+TEMPLATES = ["Mountains", "Organic", "East Asia", "Explore", "3D Float", "Luminous", "Academic", "Snowflake"]
+TEMPLATES_EMOJI = ["🗻", "🌿", "🐼", "🧭", "🌑", "🕯️", "🎓", "❄️"]
 TYPES = ["Fun", "Serious", "Creative", "Informative", "Inspirational", "Motivational", "Educational", "Historical",
-         "Romantic", "Mysterious", "Relaxing", "Adventurous"]
-TYPES_EMOJI = ["😂", "😐", "🎨", "📚", "🌟", "💪", "👨‍🎓", "🏛️", "💕", "🕵️‍♂️", "🧘‍♀️", "🗺️"]
+         "Romantic", "Mysterious", "Relaxing", "Adventurous", "Humorous", "Scientific", "Musical", "Horror", "Fantasy",
+         "Action", "Dramatic", "Satirical", "Poetic", "Thriller", "Sports", "Comedy", "Biographical", "Political",
+         "Magical", "Mystery", "Travel", "Documentary", "Crime", "Cooking"]
+TYPES_EMOJI = ["😂", "😐", "🎨", "📚", "🌟", "💪", "👨‍🎓", "🏛️", "💕", "🕵️‍♂️", "🧘‍♀️", "🗺️", "🤣", "🔬", "🎵", "😱", "🦄",
+               "💥", "😮", "🙃", "🌸", "😰", "⚽", "😆", "📜", "🗳️", "✨", "🔮", "✈️", "🎥", "🚓", "🍽️"]
 COUNTS = [str(i) for i in range(3, 27)]
 COUNTS_EMOJI = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
 BACK = "⬅️Back"
@@ -190,7 +200,7 @@ async def generate_keyboard(page, word_array, emoji_array, callback):
     keyboard = []
     per_page = 12
     for i, words in enumerate(word_array[(page-1)*per_page:page*per_page]):
-        if i % 3 == 0:
+        if i % 2 == 0:
             keyboard.append([InlineKeyboardButton(emoji_array[i+((page-1)*per_page)] + words,
                                                   callback_data=f"{callback}{words}")])
         else:

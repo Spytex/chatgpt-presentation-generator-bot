@@ -7,12 +7,13 @@ from aiohttp import ClientSession
 
 
 class Bing:
-    def __init__(self, query, limit, adult, timeout, filter='', verbose=True):
+    def __init__(self, query, limit, adult, timeout, filter='', blocked_sites=None, verbose=True):
         self.download_count = 0
         self.image = 0
         self.query = query
         self.adult = adult
         self.filter = filter
+        self.blocked_sites = blocked_sites
         self.verbose = verbose
         self.seen = set()
 
@@ -52,6 +53,10 @@ class Bing:
                 return shorthand
 
     async def save_image(self, link):
+        print(link)
+        for site in self.blocked_sites:
+            if site in link:
+                raise ValueError("Blocked site found in URL: " + link)
         async with ClientSession() as session:
             async with session.get(link, timeout=self.timeout) as response:
                 image = await response.read()

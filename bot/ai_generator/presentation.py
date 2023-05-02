@@ -11,8 +11,7 @@ except ImportError:
 
 
 async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
-    message = f"""Create an {language} language outline for a {emotion_type} slideshow presentation on the topic of {topic} which is {slide_length} slides 
-        long. 
+    message = f"""Create an {language} language outline for a {emotion_type} slideshow presentation on the topic of {topic} which is {slide_length} slides long. 
 
         You are allowed to use the following slide types:
 
@@ -58,6 +57,8 @@ async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
         Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
         Do not write something like: "Include image here" in the Image, specify each image.
         Do not write URL to the Image.
+        Do not include more than 350 symbols in Content tag of [L_IS] slide.
+        Do not include more than 550 symbols in Content tag of [L_CS] slide.
         Do not include any special characters (?, !, ., :, ) in the Title.
         Do not include any additional information in your response and stick to the format."""
 
