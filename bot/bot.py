@@ -305,7 +305,7 @@ async def presentation_slide_count_callback(update: Update, context: CallbackCon
         page = int(data.replace("page_slide_count_", ""))
     else:
         context.user_data[PRESENTATION_TYPE_CHOICE] = data
-    text = "Choose the number of slides for your Presentation:"
+    text = "Choose an approximate number of slides for your Presentation:"
     reply_markup = await generate_keyboard(page, COUNTS, COUNTS_EMOJI, "slide_count_")
     await query.answer()
     await query.edit_message_text(text=text, reply_markup=reply_markup)

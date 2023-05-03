@@ -11,37 +11,38 @@ except ImportError:
 
 
 async def generate_docx_prompt(language, emotion_type, topic):
-    message = f"""Create an {language} language very long outline for a {emotion_type} research paper on the topic of
-    {topic} which is long as much as possible. {language} language.
+    message = f"""Create an {language} language very long outline for a {emotion_type} research paper on the topic of {topic} which is long as much as possible. 
+Language of research paper - {language}.
+Provide as much information as possible.
 
-        Put this tag before the Title: [TITLE]
-        Put this tag after the Title: [/TITLE]
-        Put this tag before the Subtitle: [SUBTITLE]
-        Put this tag after the Subtitle: [/SUBTITLE]
-        Put this tag before the Heading: [HEADING]
-        Put this tag after the Heading: [/HEADING]
-        Put this tag before the Content: [CONTENT]
-        Put this tag after the Content: [/CONTENT]
-        Put this tag before the Image: [IMAGE]
-        Put this tag after the Image: [/IMAGE]
+Put this tag before the Title: [TITLE]
+Put this tag after the Title: [/TITLE]
+Put this tag before the Subtitle: [SUBTITLE]
+Put this tag after the Subtitle: [/SUBTITLE]
+Put this tag before the Heading: [HEADING]
+Put this tag after the Heading: [/HEADING]
+Put this tag before the Content: [CONTENT]
+Put this tag after the Content: [/CONTENT]
+Put this tag before the Image: [IMAGE]
+Put this tag after the Image: [/IMAGE]
 
-        Elaborate on the Content, provide as much information as possible.
-        You put a [/CONTENT] at the end of the Content.
-        Do not put a tag before ending previous.
+Elaborate on the Content, provide as much information as possible.
+You put a [/CONTENT] at the end of the Content.
+Do not put a tag before ending previous.
 
-        For example:
-        [TITLE]Mental Health[/TITLE]
-        [SUBTITLE]Understanding and Nurturing Your Mind: A Guide to Mental Health[/SUBTITLE]
-        [HEADING]Mental Health Definition[/HEADING]
-        [CONTENT]...[/CONTENT]
-        [IMAGE]Mental Health[/IMAGE]
+For example:
+[TITLE]Mental Health[/TITLE]
+[SUBTITLE]Understanding and Nurturing Your Mind: A Guide to Mental Health[/SUBTITLE]
+[HEADING]Mental Health Definition[/HEADING]
+[CONTENT]...[/CONTENT]
+[IMAGE]Person meditating[/IMAGE]
 
-        Pay attention to the language of research paper - {language}.
-        Do not reply as if you are talking about the research paper itself. (ex. "Include pictures here about...")
-        Do not write something like: "Include image here" in the Image, specify each image.
-        Do not write URL to the Image.
-        Do not include any special characters (?, !, ., :, ) in the Title.
-        Do not include any additional information in your response and stick to the format."""
+Pay attention to the language of research paper - {language}.
+Do not reply as if you are talking about the research paper itself. (ex. "Include pictures here about...")
+Do not write something like: "Include image here" in the Image, specify each image.
+Do not write URL to the Image.
+Do not include any special characters (?, !, ., :, ) in the Title.
+Do not include any additional information in your response and stick to the format."""
 
     return message
 

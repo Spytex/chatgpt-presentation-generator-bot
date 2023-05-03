@@ -12,55 +12,55 @@ except ImportError:
 
 async def generate_ppt_prompt(language, emotion_type, slide_length, topic):
     message = f"""Create an {language} language outline for a {emotion_type} slideshow presentation on the topic of {topic} which is {slide_length} slides long. 
+Make sure it is {slide_length} slides long.
 
-        You are allowed to use the following slide types:
+You are allowed to use the following slide types:
 
-        Slide types:
-        Title Slide - (Title, Subtitle)
-        Content Slide - (Title, Content)
-        Image Slide - (Title, Content, Image)
-        Thanks Slide - (Title)
+Slide types:
+Title Slide - (Title, Subtitle)
+Content Slide - (Title, Content)
+Image Slide - (Title, Content, Image)
+Thanks Slide - (Title)
 
-        Put this tag before the Title Slide: [L_TS]
-        Put this tag before the Content Slide: [L_CS]
-        Put this tag before the Image Slide: [L_IS]
-        Put this tag before the Thanks Slide: [L_THS]
+Put this tag before the Title Slide: [L_TS]
+Put this tag before the Content Slide: [L_CS]
+Put this tag before the Image Slide: [L_IS]
+Put this tag before the Thanks Slide: [L_THS]
 
-        Put "[SLIDEBREAK]" after each slide 
+Put "[SLIDEBREAK]" after each slide 
 
-        For example:
-        [L_TS]
-        [TITLE]Mental Health[/TITLE]
+For example:
+[L_TS]
+[TITLE]Mental Health[/TITLE]
 
-        [SLIDEBREAK]
+[SLIDEBREAK]
 
-        [L_CS] 
-        [TITLE]Mental Health Definition[/TITLE]
-        [CONTENT]1. Definition: A person’s condition with regard to their psychological and emotional well-being
-        2. Can impact one's physical health
-        3. Stigmatized too often.[/CONTENT]
+[L_CS] 
+[TITLE]Mental Health Definition[/TITLE]
+[CONTENT]1. Definition: A person’s condition with regard to their psychological and emotional wellbeing
+2. Can impact one's physical health
+3. Stigmatized too often.[/CONTENT]
 
-        [SLIDEBREAK]
+[SLIDEBREAK]
 
-        Put this tag before the Title: [TITLE]
-        Put this tag after the Title: [/TITLE]
-        Put this tag before the Subitle: [SUBTITLE]
-        Put this tag after the Subtitle: [/SUBTITLE]
-        Put this tag before the Content: [CONTENT]
-        Put this tag after the Content: [/CONTENT]
-        Put this tag before the Image: [IMAGE]
-        Put this tag after the Image: [/IMAGE]
+Put this tag before the Title: [TITLE]
+Put this tag after the Title: [/TITLE]
+Put this tag before the Subtitle: [SUBTITLE]
+Put this tag after the Subtitle: [/SUBTITLE]
+Put this tag before the Content: [CONTENT]
+Put this tag after the Content: [/CONTENT]
+Put this tag before the Image: [IMAGE]
+Put this tag after the Image: [/IMAGE]
 
-        Elaborate on the Content, provide as much information as possible.
-        You put a [/CONTENT] at the end of the Content.
-        Pay attention to the language of presentation - {language}.
-        Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
-        Do not write something like: "Include image here" in the Image, specify each image.
-        Do not write URL to the Image.
-        Do not include more than 350 symbols in Content tag of [L_IS] slide.
-        Do not include more than 550 symbols in Content tag of [L_CS] slide.
-        Do not include any special characters (?, !, ., :, ) in the Title.
-        Do not include any additional information in your response and stick to the format."""
+Elaborate on the Content, provide as much information as possible.
+You put a [/CONTENT] at the end of the Content.
+Pay attention to the language of presentation - {language}.
+Do not write about Image in Content tag.
+Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
+Do not write something like: "Include image here" in the Image, specify each image.
+Do not write URL to the Image.
+Do not include any special characters (?, !, ., :, ) in the Title.
+Do not include any additional information in your response and stick to the format."""
 
     return message
 
