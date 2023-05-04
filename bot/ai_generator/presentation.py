@@ -27,19 +27,20 @@ Put this tag before the Content Slide: [L_CS]
 Put this tag before the Image Slide: [L_IS]
 Put this tag before the Thanks Slide: [L_THS]
 
-Put "[SLIDEBREAK]" after each slide 
+Put this tag after each Slide: [SLIDEBREAK]
 
 For example:
 [L_TS]
-[TITLE]Mental Health[/TITLE]
+[TITLE]Mount Everest: The Highest Peak in the World[/TITLE]
 
 [SLIDEBREAK]
 
-[L_CS] 
-[TITLE]Mental Health Definition[/TITLE]
-[CONTENT]1. Definition: A person’s condition with regard to their psychological and emotional wellbeing
-2. Can impact one's physical health
-3. Stigmatized too often.[/CONTENT]
+[L_IS]
+[TITLE]Facts about Mount Everest[/TITLE]
+[CONTENT]• It is 8,848 meters (29,029 ft) high above sea level
+• First successfully climbed by Sir Edmund Hillary and Tenzing Norgay on May 29, 1953
+• Over 300 climbers have died attempting to scale the mountain[/CONTENT]
+[IMAGE]Mount Everest[/IMAGE]
 
 [SLIDEBREAK]
 
@@ -55,10 +56,9 @@ Put this tag after the Image: [/IMAGE]
 Elaborate on the Content, provide as much information as possible.
 You put a [/CONTENT] at the end of the Content.
 Pay attention to the language of presentation - {language}.
-Do not write about Image in Content tag.
+Each image should be described by a set of keywords, such as "Mount Everest Sunset" or "Niagara Falls Rainbow".
+Do not write Image in Content tag.
 Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
-Do not write something like: "Include image here" in the Image, specify each image.
-Do not write URL to the Image.
 Do not include any special characters (?, !, ., :, ) in the Title.
 Do not include any additional information in your response and stick to the format."""
 
@@ -110,9 +110,12 @@ async def generate_ppt(answer, template):
         slide.shapes.title.text = title
         slide.placeholders[2].text = content
 
-        image_data = await downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
-                                               filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
-        slide.placeholders[1].insert_picture(io.BytesIO(image_data))
+        try:
+            image_data = await downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
+                                                   filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
+            slide.placeholders[1].insert_picture(io.BytesIO(image_data))
+        except Exception:
+            pass
 
     async def find_text_in_between_tags(text, start_tag, end_tag):
         start_pos = text.find(start_tag)

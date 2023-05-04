@@ -35,12 +35,11 @@ For example:
 [SUBTITLE]Understanding and Nurturing Your Mind: A Guide to Mental Health[/SUBTITLE]
 [HEADING]Mental Health Definition[/HEADING]
 [CONTENT]...[/CONTENT]
-[IMAGE]Person meditating[/IMAGE]
+[IMAGE]Person Meditating[/IMAGE]
 
 Pay attention to the language of research paper - {language}.
+Each image should be described by a set of keywords, such as "Mount Everest Sunset" or "Niagara Falls Rainbow".
 Do not reply as if you are talking about the research paper itself. (ex. "Include pictures here about...")
-Do not write something like: "Include image here" in the Image, specify each image.
-Do not write URL to the Image.
 Do not include any special characters (?, !, ., :, ) in the Title.
 Do not include any additional information in your response and stick to the format."""
 
