@@ -56,7 +56,7 @@ Put this tag after the Image: [/IMAGE]
 Elaborate on the Content, provide as much information as possible.
 You put a [/CONTENT] at the end of the Content.
 Pay attention to the language of presentation - {language}.
-Each image should be described by a set of keywords, such as "Mount Everest Sunset" or "Niagara Falls Rainbow".
+Each image should be described in general by a set of keywords, such as "Mount Everest Sunset" or "Niagara Falls Rainbow".
 Do not write Image in Content tag.
 Do not reply as if you are talking about the slideshow itself. (ex. "Include pictures here about...")
 Do not include any special characters (?, !, ., :, ) in the Title.
@@ -112,7 +112,7 @@ async def generate_ppt(answer, template):
 
         try:
             image_data = await downloader.download(image_query, limit=1, adult_filter_off=True, timeout=15,
-                                                   filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
+                                                   filter="+filterui:aspect-wide+filterui:imagesize-wallpaper+filterui:photo-photo")
             slide.placeholders[1].insert_picture(io.BytesIO(image_data))
         except Exception:
             pass

@@ -38,7 +38,7 @@ For example:
 [IMAGE]Person Meditating[/IMAGE]
 
 Pay attention to the language of research paper - {language}.
-Each image should be described by a set of keywords, such as "Mount Everest Sunset" or "Niagara Falls Rainbow".
+Each image should be described in general by a set of keywords, such as "Mount Everest Sunset" or "Niagara Falls Rainbow".
 Do not reply as if you are talking about the research paper itself. (ex. "Include pictures here about...")
 Do not include any special characters (?, !, ., :, ) in the Title.
 Do not include any additional information in your response and stick to the format."""
@@ -70,7 +70,7 @@ async def generate_docx(answer):
                 case('IMAGE'):
                     try:
                         image_data = await downloader.download(item[1], limit=1, adult_filter_off=True, timeout=15,
-                                                               filter="+filterui:aspect-wide+filterui:imagesize-wallpaper")
+                                                               filter="+filterui:aspect-wide+filterui:imagesize-wallpaper+filterui:photo-photo")
                         doc.add_picture(io.BytesIO(image_data), width=Inches(6))
                     except Exception:
                         pass

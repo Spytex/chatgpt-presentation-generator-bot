@@ -5,7 +5,7 @@ import openai
 openai.api_key = config.openai_api_key
 
 OPENAI_COMPLETION_OPTIONS = {
-    "temperature": 0.8,
+    "temperature": 0.75,
     "max_tokens": 3072,
     "top_p": 1,
     "frequency_penalty": 0,
