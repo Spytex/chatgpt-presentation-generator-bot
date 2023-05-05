@@ -141,8 +141,8 @@ LANGUAGES_EMOJI = ['🇬🇧', '🏳️', '🇩🇪', '🇫🇷', '🇮🇹', '�
                    '🇨🇿', '🇵🇹', '🇸🇪', '🇭🇺', '🇷🇸', '🇧🇬', '🇩🇰', '🇳🇴', '🇫🇮', '🇸🇰', '🇭🇷', '🇸🇦',
                    '🇮🇱', '🇱🇹', '🇸🇮', '🇧🇩', '🇨🇳', '🇮🇷', '🇮🇩', '🇱🇻', '🇮🇳', '🇯🇵', '🇪🇪', '🇮🇳',
                    '🇰🇷', '🇹🇭', '🇮🇸', '🇻🇳']
-TEMPLATES = ["Mountains", "Organic", "East Asia", "Explore", "3D Float", "Luminous", "Academic", "Snowflake"]
-TEMPLATES_EMOJI = ["🗻", "🌿", "🐼", "🧭", "🌑", "🕯️", "🎓", "❄️"]
+TEMPLATES = ["Mountains", "Organic", "East Asia", "Explore", "3D Float", "Luminous", "Academic", "Snowflake", "Floral"]
+TEMPLATES_EMOJI = ["🗻", "🌿", "🐼", "🧭", "🌑", "🕯️", "🎓", "❄️", "🌺"]
 TYPES = ["Fun", "Serious", "Creative", "Informative", "Inspirational", "Motivational", "Educational", "Historical",
          "Romantic", "Mysterious", "Relaxing", "Adventurous", "Humorous", "Scientific", "Musical", "Horror", "Fantasy",
          "Action", "Dramatic", "Satirical", "Poetic", "Thriller", "Sports", "Comedy", "Biographical", "Political",
