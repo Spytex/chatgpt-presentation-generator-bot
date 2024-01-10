@@ -1,0 +1,4 @@
+telegram_token: <your telegram token>
+openai_api_key: <your openai api key>
+provider_token: <your provider token>
+allowed_telegram_usernames: []  # if empty, the bot is available to anyone
